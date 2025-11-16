@@ -4,80 +4,61 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AimLab 3D Simplifié</title>
-
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js"></script>
-
 <style>
-html,body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; font-family:Arial,sans-serif; background:#070707; color:#fff; }
-canvas { display:block; }
-
-#menu {
-  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-  width:300px; max-width:90vw; background:rgba(0,0,0,0.85); border-radius:12px; padding:20px;
-  box-shadow:0 0 20px rgba(0,0,0,0.7); z-index:10; text-align:center;
-}
-#menu h2 { margin:0 0 10px 0; font-size:22px; }
-#menu label { display:block; margin-top:10px; font-size:14px; text-align:left; }
-#menu select, #menu button { width:100%; padding:8px; margin-top:5px; border-radius:8px; border:none; font-size:14px; }
-#menu button { background:#1e90ff; color:#fff; cursor:pointer; transition:0.2s; }
-#menu button:hover { background:#0f70d0; }
-
-#hud {
-  position:fixed; top:12px; right:12px; background:rgba(0,0,0,0.7); padding:12px; border-radius:8px;
-  font-size:14px; min-width:150px;
-}
-
-#touchShoot {
-  position:fixed; right:20px; bottom:20px; width:70px; height:70px; border-radius:50%;
-  background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:16px;
-}
-@media(max-width:900px){ #touchShoot { display:flex; } }
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#070707;color:#fff;}
+canvas{display:block;}
+#menu{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:300px;max-width:90vw;background:rgba(0,0,0,0.85);border-radius:12px;padding:20px;box-shadow:0 0 20px rgba(0,0,0,0.7);z-index:10;text-align:center;}
+#menu h2{margin:0 0 10px 0;font-size:22px;}
+#menu label{display:block;margin-top:10px;font-size:14px;text-align:left;}
+#menu select,#menu button{width:100%;padding:8px;margin-top:5px;border-radius:8px;border:none;font-size:14px;}
+#menu button{background:#1e90ff;color:#fff;cursor:pointer;transition:0.2s;}
+#menu button:hover{background:#0f70d0;}
+#hud{position:fixed;top:12px;right:12px;background:rgba(0,0,0,0.7);padding:12px;border-radius:8px;font-size:14px;min-width:150px;}
+#touchShoot{position:fixed;right:20px;bottom:20px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:16px;}
+@media(max-width:900px){#touchShoot{display:flex;}}
 </style>
 </head>
 <body>
 
 <div id="menu">
-  <h2>AimLab 3D</h2>
-
-  <label>Mode</label>
-  <select id="modeSelect">
-    <option value="static">Static</option>
-    <option value="flick">Flick</option>
-    <option value="tracking">Tracking</option>
-    <option value="sniper">Sniper</option>
-    <option value="speed">Speed</option>
-  </select>
-
-  <label>Durée (secondes)</label>
-  <select id="durationSelect">
-    <option>30</option>
-    <option selected>60</option>
-    <option>90</option>
-  </select>
-
-  <label>Arme</label>
-  <select id="weaponSelect">
-    <option value="vandal">Vandal</option>
-    <option value="sniper">Sniper</option>
-  </select>
-
-  <button id="startBtn">Commencer</button>
+<h2>AimLab 3D</h2>
+<label>Mode</label>
+<select id="modeSelect">
+<option value="static">Static</option>
+<option value="flick">Flick</option>
+<option value="tracking">Tracking</option>
+<option value="sniper">Sniper</option>
+<option value="speed">Speed</option>
+</select>
+<label>Durée (secondes)</label>
+<select id="durationSelect">
+<option>30</option>
+<option selected>60</option>
+<option>90</option>
+</select>
+<label>Arme</label>
+<select id="weaponSelect">
+<option value="vandal">Vandal</option>
+<option value="sniper">Sniper</option>
+</select>
+<button id="startBtn">Commencer</button>
 </div>
 
 <div id="hud" style="display:none;">
-  <div>Mode: <span id="infoMode"></span></div>
-  <div>Score: <span id="infoScore">0</span></div>
-  <div>Temps: <span id="infoTimer"></span></div>
-  <div>Hits: <span id="infoHits">0</span></div>
+<div>Mode: <span id="infoMode"></span></div>
+<div>Score: <span id="infoScore">0</span></div>
+<div>Temps: <span id="infoTimer"></span></div>
+<div>Hits: <span id="infoHits">0</span></div>
 </div>
 
 <div id="touchShoot" style="display:none;">TIR</div>
 
 <script>
 let scene,camera,renderer,controls;
-let targets=[], weaponModel;
-let running=false, mode='static', duration=60, score=0,hits=0,misses=0,timeLeft=60;
+let targets=[],weaponModel;
+let running=false,mode='static',duration=60,score=0,hits=0,misses=0,timeLeft=60;
 let spawnInterval,timerInterval;
 
 const menu=document.getElementById('menu');
@@ -95,143 +76,130 @@ const infoHits=document.getElementById('infoHits');
 const touchShoot=document.getElementById('touchShoot');
 
 function init(){
-  scene=new THREE.Scene();
-  scene.background=new THREE.Color(0x070707);
+scene=new THREE.Scene();
+scene.background=new THREE.Color(0x070707);
 
-  camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,200);
-  camera.position.set(0,1.6,0);
+camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,200);
+camera.position.set(0,1.6,0);
 
-  renderer=new THREE.WebGLRenderer({antialias:true});
-  renderer.setSize(window.innerWidth,window.innerHeight);
-  document.body.appendChild(renderer.domElement);
+renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-  const hemi=new THREE.HemisphereLight(0xffffff,0x444444,1);
-  scene.add(hemi);
-  const dir=new THREE.DirectionalLight(0xffffff,0.8);
-  dir.position.set(5,10,7);
-  scene.add(dir);
+const hemi=new THREE.HemisphereLight(0xffffff,0x444444,1);
+scene.add(hemi);
+const dir=new THREE.DirectionalLight(0xffffff,0.8);
+dir.position.set(5,10,7);
+scene.add(dir);
 
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshStandardMaterial({color:0x111111}));
-  floor.rotation.x=-Math.PI/2;
-  scene.add(floor);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshStandardMaterial({color:0x111111}));
+floor.rotation.x=-Math.PI/2;
+scene.add(floor);
 
-  controls=new THREE.PointerLockControls(camera,renderer.domElement);
+controls=new THREE.PointerLockControls(camera,renderer.domElement);
 
-  window.addEventListener('resize',onResize);
-  document.addEventListener('mousedown',onMouseDown);
-  renderer.domElement.addEventListener('touchstart',onTouchStart,{passive:false});
-  renderer.domElement.addEventListener('touchmove',onTouchMove,{passive:false});
-  renderer.domElement.addEventListener('touchend',onTouchEnd,{passive:false});
+window.addEventListener('resize',onResize);
+document.addEventListener('mousedown',onMouseDown);
+renderer.domElement.addEventListener('touchstart',onTouchStart,{passive:false});
+renderer.domElement.addEventListener('touchmove',onTouchMove,{passive:false});
+renderer.domElement.addEventListener('touchend',onTouchEnd,{passive:false});
 
-  animate();
+animate();
 }
 
-// --- ARME SIMPLE ---
 function loadWeapon(name){
-  if(weaponModel) camera.remove(weaponModel);
-  if(name==='vandal'){
-    weaponModel=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.1,1),new THREE.MeshStandardMaterial({color:0x2288ff}));
-  }else{
-    weaponModel=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.2,8),new THREE.MeshStandardMaterial({color:0xff2222}));
-    weaponModel.rotation.z=Math.PI/2;
-  }
-  weaponModel.position.set(0.3,-0.35,-0.6);
-  camera.add(weaponModel);
+if(weaponModel) camera.remove(weaponModel);
+if(name==='vandal'){
+weaponModel=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.1,1),new THREE.MeshStandardMaterial({color:0x2288ff}));
+}else{
+weaponModel=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.2,8),new THREE.MeshStandardMaterial({color:0xff2222}));
+weaponModel.rotation.z=Math.PI/2;
+}
+weaponModel.position.set(0.3,-0.35,-0.6);
+camera.add(weaponModel);
 }
 
-// --- TARGETS ---
 function spawnTarget(){
-  const geo=new THREE.SphereGeometry(0.4,12,12);
-  const mat=new THREE.MeshStandardMaterial({color:0xff4444});
-  const t=new THREE.Mesh(geo,mat);
-  t.position.set((Math.random()-0.5)*10,Math.random()*2+0.5,-Math.random()*10-5);
-  scene.add(t);
-  targets.push(t);
+const geo=new THREE.SphereGeometry(0.4,12,12);
+const mat=new THREE.MeshStandardMaterial({color:0xff4444});
+const t=new THREE.Mesh(geo,mat);
+t.position.set((Math.random()-0.5)*10,Math.random()*2+0.5,-Math.random()*10-5);
+scene.add(t);
+targets.push(t);
 }
-function clearTargets(){ targets.forEach(t=>scene.remove(t)); targets=[]; }
 
-// --- SHOOT ---
+function clearTargets(){targets.forEach(t=>scene.remove(t));targets=[];}
+
 function shoot(){
-  if(!running) return;
-  const ray=new THREE.Raycaster();
-  ray.setFromCamera(new THREE.Vector2(0,0),camera);
-  const hits=ray.intersectObjects(targets);
-  if(hits.length>0){
-    const t=hits[0].object;
-    scene.remove(t);
-    targets=targets.filter(x=>x!==t);
-    hits++; score+=100;
-    infoScore.textContent=score;
-    infoHits.textContent=`Hits: ${hits} | Misses: ${misses}`;
-    spawnTarget();
-  }else{
-    misses++;
-    infoHits.textContent=`Hits: ${hits} | Misses: ${misses}`;
-  }
+if(!running) return;
+const ray=new THREE.Raycaster();
+ray.setFromCamera(new THREE.Vector2(0,0),camera);
+const hitsArr=ray.intersectObjects(targets);
+if(hitsArr.length>0){
+const t=hitsArr[0].object;
+scene.remove(t);
+targets=targets.filter(x=>x!==t);
+hits++;score+=100;
+infoScore.textContent=score;
+infoHits.textContent=`Hits: ${hits} | Misses: ${misses}`;
+spawnTarget();
+}else{
+misses++;
+infoHits.textContent=`Hits: ${hits} | Misses: ${misses}`;
+}
 }
 
-// --- START / END GAME ---
 function startGame(){
-  mode=modeSelect.value;
-  duration=parseInt(durationSelect.value);
-  score=0; hits=0; misses=0; timeLeft=duration;
-  infoMode.textContent=mode; infoScore.textContent=score;
-  infoHits.textContent=`Hits: ${hits} | Misses: ${misses}`;
-  infoTimer.textContent=timeLeft;
+mode=modeSelect.value;
+duration=parseInt(durationSelect.value);
+score=0; hits=0; misses=0; timeLeft=duration;
+infoMode.textContent=mode; infoScore.textContent=score;
+infoHits.textContent=`Hits: ${hits} | Misses: ${misses}`;
+infoTimer.textContent=timeLeft;
 
-  menu.style.display='none';
-  hud.style.display='block';
-  if(window.innerWidth<900) touchShoot.style.display='flex';
+menu.style.display='none';
+hud.style.display='block';
+if(window.innerWidth<900) touchShoot.style.display='flex';
 
-  running=true;
-  clearTargets();
-  loadWeapon(weaponSelect.value);
+running=true;
+clearTargets();
+loadWeapon(weaponSelect.value);
 
-  for(let i=0;i<5;i++) spawnTarget();
+for(let i=0;i<5;i++) spawnTarget();
 
-  spawnInterval=setInterval(()=>{
-    if(!running) return;
-    if(targets.length<10) spawnTarget();
-  },1500);
+spawnInterval=setInterval(()=>{if(!running) return;if(targets.length<10) spawnTarget();},1500);
 
-  timerInterval=setInterval(()=>{
-    if(!running) return;
-    timeLeft--;
-    infoTimer.textContent=timeLeft;
-    if(timeLeft<=0) endGame();
-  },1000);
+timerInterval=setInterval(()=>{
+if(!running) return;
+timeLeft--;
+infoTimer.textContent=timeLeft;
+if(timeLeft<=0) endGame();
+},1000);
 }
+
 function endGame(){
-  running=false;
-  clearInterval(spawnInterval);
-  clearInterval(timerInterval);
-  alert(`Session terminée\nScore: ${score}\nHits: ${hits}\nMisses: ${misses}`);
-  menu.style.display='block';
-  hud.style.display='none';
-  touchShoot.style.display='none';
-  clearTargets();
+running=false;
+clearInterval(spawnInterval);
+clearInterval(timerInterval);
+alert(`Session terminée\nScore: ${score}\nHits: ${hits}\nMisses: ${misses}`);
+menu.style.display='block';
+hud.style.display='none';
+touchShoot.style.display='none';
+clearTargets();
 }
 
-// --- CONTROLS ---
-function onMouseDown(e){ if(e.button===0) shoot(); }
+function onMouseDown(e){if(e.button===0) shoot();}
 let lastTouch=null;
-function onTouchStart(e){ lastTouch={x:e.touches[0].clientX,y:e.touches[0].clientY}; e.preventDefault(); }
-function onTouchMove(e){ 
-  const t=e.touches[0];
-  camera.rotation.y-=(t.clientX-lastTouch.x)*0.002;
-  camera.rotation.x-=(t.clientY-lastTouch.y)*0.002;
-  camera.rotation.x=Math.max(-Math.PI/2,Math.min(Math.PI/2,camera.rotation.x));
-  lastTouch={x:t.clientX,y:t.clientY}; e.preventDefault();
-}
-function onTouchEnd(e){ shoot(); lastTouch=null; e.preventDefault(); }
+function onTouchStart(e){lastTouch={x:e.touches[0].clientX,y:e.touches[0].clientY};e.preventDefault();}
+function onTouchMove(e){const t=e.touches[0];camera.rotation.y-=(t.clientX-lastTouch.x)*0.002;camera.rotation.x-=(t.clientY-lastTouch.y)*0.002;camera.rotation.x=Math.max(-Math.PI/2,Math.min(Math.PI/2,camera.rotation.x));lastTouch={x:t.clientX,y:t.clientY};e.preventDefault();}
+function onTouchEnd(e){shoot();lastTouch=null;e.preventDefault();}
 
-function onResize(){ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); }
-function animate(){ requestAnimationFrame(animate); renderer.render(scene,camera); }
+function onResize(){camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);}
+function animate(){requestAnimationFrame(animate);renderer.render(scene,camera);}
 
 window.addEventListener('load',init);
 startBtn.addEventListener('click',startGame);
-touchShoot.addEventListener('touchstart',e=>{ e.preventDefault(); shoot(); });
+touchShoot.addEventListener('touchstart',e=>{e.preventDefault();shoot();});
 </script>
-
 </body>
 </html>
