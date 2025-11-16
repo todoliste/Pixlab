@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AimLab 3D - Vandal & Sniper</title>
 
-<!-- Three.js -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/PointerLockControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -117,22 +116,18 @@ function init(){
 
   clock = new THREE.Clock();
 
-  // Lights
   const hemi = new THREE.HemisphereLight(0xffffff,0x444444,1);
   scene.add(hemi);
   const dir = new THREE.DirectionalLight(0xffffff,0.8);
   dir.position.set(5,10,7);
   scene.add(dir);
 
-  // Floor
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(100,100), new THREE.MeshStandardMaterial({color:0x111111}));
   floor.rotation.x = -Math.PI/2;
   scene.add(floor);
 
-  // Controls
   controls = new THREE.PointerLockControls(camera, renderer.domElement);
 
-  // Event listeners
   window.addEventListener('resize', onResize);
   document.addEventListener('mousedown', onMouseDown);
   renderer.domElement.addEventListener('touchstart', onTouchStart,{passive:false});
@@ -142,6 +137,7 @@ function init(){
   animate();
 }
 
+// --- TARGETS SPAWN ---
 function spawnTarget(){
   const geo = new THREE.SphereGeometry(0.4,12,12);
   const mat = new THREE.MeshStandardMaterial({color:0xff4444});
@@ -156,6 +152,7 @@ function clearTargets(){
   targets=[];
 }
 
+// --- SHOOT ---
 function shoot(){
   if(!running) return;
   const ray = new THREE.Raycaster();
@@ -175,6 +172,7 @@ function shoot(){
   }
 }
 
+// --- START GAME ---
 function startGame(){
   mode = modeSelect.value;
   duration = parseInt(durationSelect.value);
@@ -189,15 +187,24 @@ function startGame(){
 
   running=true;
   clearTargets();
-  spawnTarget();
+
+  // spawn 5 targets initiales
+  for(let i=0;i<5;i++) spawnTarget();
 
   loadWeapon(weaponSelect.value);
 
+  // spawn continu toutes les 1.5s
+  spawnTimer = setInterval(()=>{
+    if(!running) return;
+    if(targets.length<10) spawnTarget();
+  },1500);
+
+  // timer countdown
   const interval = setInterval(()=>{
     if(!running){ clearInterval(interval); return;}
     timeLeft--;
     infoTimer.textContent=timeLeft;
-    if(timeLeft<=0){ endGame(); clearInterval(interval);}
+    if(timeLeft<=0){ endGame(); clearInterval(interval); clearInterval(spawnTimer);}
   },1000);
 }
 
@@ -222,6 +229,7 @@ function loadWeapon(name){
   });
 }
 
+// --- CONTROLS ---
 function onMouseDown(e){
   if(e.button===0) shoot();
   if(document.pointerLockElement!==renderer.domElement && window.innerWidth>900){
