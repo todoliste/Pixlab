@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>AimLab Simplifié</title>
+<title>AimLab Simplifié V2</title>
 <style>
 body {margin:0; overflow:hidden; font-family:sans-serif; background:#000; color:#fff;}
 #canvas-container{position:fixed;top:0;left:0;width:100%;height:100%;}
@@ -28,7 +28,7 @@ let score = 0;
 let gameStarted = false;
 const isMobile = 'ontouchstart' in window;
 
-// Initialisation Three.js
+// Initialisation
 function init() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x111111);
@@ -57,23 +57,25 @@ function init() {
     animate();
 }
 
-// Crée les cibles devant le joueur
+// Crée les cibles
 function createTargets(){
     for(let i=0;i<5;i++){
         const geo = new THREE.SphereGeometry(0.3,16,16);
         const mat = new THREE.MeshStandardMaterial({color:0xff0000,emissive:0xff0000});
         const target = new THREE.Mesh(geo,mat);
         positionTarget(target);
+        target.userData.moving = (i<2); // 2 cibles bougent
+        target.userData.dir = 1;
         scene.add(target);
         targets.push(target);
     }
 }
 
-// Place la cible aléatoirement devant le joueur dans le stand
+// Place aléatoirement devant le joueur
 function positionTarget(target){
-    const distance = 2 + Math.random()*3;
-    const angle = (Math.random()-0.5)*Math.PI/3;
-    const height = 1 + Math.random();
+    const distance = 4 + Math.random()*4; // plus loin
+    const angle = (Math.random()-0.5)*Math.PI/6;
+    const height = 1 + Math.random()*1.5;
     let dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
     dir.y = 0; dir.normalize();
@@ -93,39 +95,30 @@ function shoot(){
         const target = intersects[0].object;
         score++;
         document.getElementById('score').textContent = score;
-        // Repositionnement avec transition pour éviter le freeze
-        const newPos = getRandomTargetPos();
-        const startPos = target.position.clone();
-        const duration = 300;
-        const startTime = Date.now();
-        function move(){
-            const t = Math.min((Date.now()-startTime)/duration,1);
-            target.position.lerpVectors(startPos,newPos,t);
-            if(t<1) requestAnimationFrame(move);
-        }
-        move();
+        // Nouvelle position immédiate (plus de freeze)
+        positionTarget(target);
     }
 }
 
-// Génère une nouvelle position aléatoire devant la caméra
-function getRandomTargetPos(){
-    const distance = 2 + Math.random()*3;
-    const angle = (Math.random()-0.5)*Math.PI/3;
-    const height = 1 + Math.random();
-    let dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y=0; dir.normalize();
-    let side = new THREE.Vector3(); side.crossVectors(new THREE.Vector3(0,1,0),dir).normalize();
-    let pos = camera.position.clone().add(dir.multiplyScalar(distance)).add(side.multiplyScalar(Math.tan(angle)*distance));
-    pos.y = height;
-    return pos;
+// Animation des cibles
+function animateTargets(){
+    targets.forEach(t=>{
+        if(t.userData.moving){
+            t.position.x += 0.01*t.userData.dir;
+            if(t.position.x>camera.position.x+2) t.userData.dir=-1;
+            if(t.position.x<camera.position.x-2) t.userData.dir=1;
+        }
+    });
 }
 
 // Animation
 function animate(){
     requestAnimationFrame(animate);
+    animateTargets();
     renderer.render(scene,camera);
 }
 
-// Déplacement caméra PC
+// Contrôles PC
 function setupControlsPC(){
     document.addEventListener('mousemove',e=>{
         if(!gameStarted) return;
@@ -138,7 +131,7 @@ function setupControlsPC(){
     document.addEventListener('click',()=>{shoot(); renderer.domElement.requestPointerLock();});
 }
 
-// Déplacement caméra Mobile
+// Contrôles Mobile
 function setupControlsMobile(){
     document.getElementById('shoot-btn').style.display='block';
     document.getElementById('shoot-btn').addEventListener('touchstart',shoot);
@@ -155,11 +148,11 @@ function setupControlsMobile(){
         camera.rotation.y -= deltaX*0.005;
         camera.rotation.x -= deltaY*0.005;
         camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2,camera.rotation.x));
-        startX = t.clientX; startY=t.clientY;
+        startX = t.clientX; startY = t.clientY;
     });
 }
 
-// Lancement du jeu
+// Lancement
 document.getElementById('start-btn').addEventListener('click',()=>{
     gameStarted=true;
     document.getElementById('start-btn').style.display='none';
