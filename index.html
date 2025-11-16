@@ -3,21 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>AimLab Simplifié V2</title>
+<title>AimLab Mobile V3</title>
 <style>
-body {margin:0; overflow:hidden; font-family:sans-serif; background:#000; color:#fff;}
-#canvas-container{position:fixed;top:0;left:0;width:100%;height:100%;}
-#crosshair{position:fixed;top:50%;left:50%;width:4px;height:4px;background:#0f0;transform:translate(-50%,-50%);}
-#shoot-btn{display:none; position:fixed; bottom:20px; right:20px; width:80px; height:80px; background:red; border-radius:50%; font-size:2rem; text-align:center; line-height:80px; cursor:pointer;}
-#hud{position:fixed; top:10px; left:10px; font-size:1.5rem;}
-#start-btn{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); padding:20px 50px; font-size:1.5rem; cursor:pointer;}
+body, html {margin:0; padding:0; overflow:hidden; background:#000;}
+#crosshair{
+    position:fixed;
+    top:50%;
+    left:50%;
+    width:6px;
+    height:6px;
+    background:#0f0;
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    z-index:10;
+}
+#shoot-btn{
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    width:70px;
+    height:70px;
+    background:red;
+    border-radius:50%;
+    font-size:2rem;
+    text-align:center;
+    line-height:70px;
+    z-index:10;
+    user-select:none;
+    touch-action:none;
+}
+#score-hud{
+    position:fixed;
+    top:10px;
+    left:10px;
+    font-size:1.5rem;
+    color:white;
+    z-index:10;
+}
+#start-btn{
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    padding:20px 50px;
+    font-size:1.5rem;
+    cursor:pointer;
+    z-index:10;
+}
 </style>
 </head>
 <body>
-<div id="canvas-container"></div>
 <div id="crosshair"></div>
 <div id="shoot-btn">🎯</div>
-<div id="hud">Score: <span id="score">0</span></div>
+<div id="score-hud">Score: <span id="score">0</span></div>
 <button id="start-btn">Commencer</button>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -28,8 +66,8 @@ let score = 0;
 let gameStarted = false;
 const isMobile = 'ontouchstart' in window;
 
-// Initialisation
-function init() {
+// --- INIT SCENE ---
+function init(){
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x111111);
 
@@ -38,18 +76,10 @@ function init() {
 
     renderer = new THREE.WebGLRenderer({antialias:true});
     renderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById('canvas-container').appendChild(renderer.domElement);
+    document.body.appendChild(renderer.domElement);
 
-    // Sol
-    const floorMat = new THREE.MeshStandardMaterial({color:0x222222});
-    const floorGeo = new THREE.PlaneGeometry(20,20);
-    const floor = new THREE.Mesh(floorGeo,floorMat);
-    floor.rotation.x = -Math.PI/2;
-    scene.add(floor);
-
-    // Lumière
     const light = new THREE.DirectionalLight(0xffffff,1);
-    light.position.set(10,10,10);
+    light.position.set(5,10,5);
     scene.add(light);
     scene.add(new THREE.AmbientLight(0xffffff,0.3));
 
@@ -57,108 +87,99 @@ function init() {
     animate();
 }
 
-// Crée les cibles
+// --- CREATE TARGETS ---
 function createTargets(){
     for(let i=0;i<5;i++){
         const geo = new THREE.SphereGeometry(0.3,16,16);
         const mat = new THREE.MeshStandardMaterial({color:0xff0000,emissive:0xff0000});
         const target = new THREE.Mesh(geo,mat);
-        positionTarget(target);
-        target.userData.moving = (i<2); // 2 cibles bougent
+        spawnTarget(target);
+        target.userData.moving = (i<2);
         target.userData.dir = 1;
         scene.add(target);
         targets.push(target);
     }
 }
 
-// Place aléatoirement devant le joueur
-function positionTarget(target){
-    const distance = 4 + Math.random()*4; // plus loin
-    const angle = (Math.random()-0.5)*Math.PI/6;
+// --- SPAWN CIBLE DEVANT CAMERA ---
+function spawnTarget(target){
+    const distance = 3 + Math.random()*3; // 3-6m devant
+    const angle = (Math.random()-0.5) * Math.PI/6; // léger angle
     const height = 1 + Math.random()*1.5;
-    let dir = new THREE.Vector3();
+
+    const dir = new THREE.Vector3();
     camera.getWorldDirection(dir);
-    dir.y = 0; dir.normalize();
-    let side = new THREE.Vector3(); side.crossVectors(new THREE.Vector3(0,1,0),dir).normalize();
-    let pos = camera.position.clone().add(dir.multiplyScalar(distance)).add(side.multiplyScalar(Math.tan(angle)*distance));
+    dir.y = 0;
+    dir.normalize();
+
+    const side = new THREE.Vector3();
+    side.crossVectors(new THREE.Vector3(0,1,0),dir).normalize();
+
+    const pos = camera.position.clone().add(dir.multiplyScalar(distance))
+        .add(side.multiplyScalar(Math.tan(angle)*distance));
     pos.y = height;
     target.position.copy(pos);
 }
 
-// Tir
+// --- SHOOT ---
 function shoot(){
-    let raycaster = new THREE.Raycaster();
-    let dir = new THREE.Vector3(0,0,-1); dir.applyQuaternion(camera.quaternion);
-    raycaster.set(camera.position,dir);
-    const intersects = raycaster.intersectObjects(targets);
-    if(intersects.length>0){
-        const target = intersects[0].object;
+    const ray = new THREE.Raycaster(camera.position, new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion));
+    const hits = ray.intersectObjects(targets);
+    if(hits.length>0){
+        const t = hits[0].object;
         score++;
         document.getElementById('score').textContent = score;
-        // Nouvelle position immédiate (plus de freeze)
-        positionTarget(target);
+        spawnTarget(t); // reposition instantané, plus de freeze
     }
 }
 
-// Animation des cibles
+// --- ANIMATE TARGETS ---
 function animateTargets(){
     targets.forEach(t=>{
         if(t.userData.moving){
             t.position.x += 0.01*t.userData.dir;
-            if(t.position.x>camera.position.x+2) t.userData.dir=-1;
-            if(t.position.x<camera.position.x-2) t.userData.dir=1;
+            if(t.position.x > camera.position.x + 2) t.userData.dir = -1;
+            if(t.position.x < camera.position.x - 2) t.userData.dir = 1;
         }
     });
 }
 
-// Animation
+// --- ANIMATION LOOP ---
 function animate(){
     requestAnimationFrame(animate);
     animateTargets();
     renderer.render(scene,camera);
 }
 
-// Contrôles PC
-function setupControlsPC(){
-    document.addEventListener('mousemove',e=>{
-        if(!gameStarted) return;
-        const movementX = e.movementX || 0;
-        const movementY = e.movementY || 0;
-        camera.rotation.y -= movementX*0.002;
-        camera.rotation.x -= movementY*0.002;
-        camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2,camera.rotation.x));
-    });
-    document.addEventListener('click',()=>{shoot(); renderer.domElement.requestPointerLock();});
-}
+// --- CONTROLES MOBILE ---
+function setupMobileControls(){
+    const shootBtn = document.getElementById('shoot-btn');
+    shootBtn.style.display='block';
+    shootBtn.addEventListener('touchstart', shoot);
 
-// Contrôles Mobile
-function setupControlsMobile(){
-    document.getElementById('shoot-btn').style.display='block';
-    document.getElementById('shoot-btn').addEventListener('touchstart',shoot);
-    let startX=0,startY=0;
-    document.addEventListener('touchstart',e=>{
-        if(e.touches[0].clientY<window.innerHeight*0.7){
-            startX=e.touches[0].clientX; startY=e.touches[0].clientY;
-        }
+    let lastX=0, lastY=0;
+    document.addEventListener('touchstart', e=>{
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
     });
-    document.addEventListener('touchmove',e=>{
+    document.addEventListener('touchmove', e=>{
         const t = e.touches[0];
-        const deltaX = t.clientX - startX;
-        const deltaY = t.clientY - startY;
-        camera.rotation.y -= deltaX*0.005;
-        camera.rotation.x -= deltaY*0.005;
-        camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2,camera.rotation.x));
-        startX = t.clientX; startY = t.clientY;
+        const dx = t.clientX - lastX;
+        const dy = t.clientY - lastY;
+        camera.rotation.y -= dx*0.005;
+        camera.rotation.x -= dy*0.005;
+        camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
+        lastX = t.clientX;
+        lastY = t.clientY;
     });
 }
 
-// Lancement
-document.getElementById('start-btn').addEventListener('click',()=>{
-    gameStarted=true;
+// --- START GAME ---
+document.getElementById('start-btn').addEventListener('click', ()=>{
+    gameStarted = true;
     document.getElementById('start-btn').style.display='none';
     init();
-    if(isMobile) setupControlsMobile();
-    else setupControlsPC();
+    if(isMobile) setupMobileControls();
 });
 </script>
 </body>
