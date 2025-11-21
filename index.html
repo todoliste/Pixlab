@@ -56,8 +56,9 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 let img = new Image();
 let imgLoaded = false;
-let drag = false;
-let startX = 0;
+
+let isDragging = false;
+let startDist = 0;
 let scaleX = 1;
 let scaleY = 1;
 
@@ -83,24 +84,38 @@ file.addEventListener('change', e=>{
   img.src = url;
 });
 
+function getDistFromCenter(e){
+  let rect = canvas.getBoundingClientRect();
+  let x = e.clientX - rect.left;
+  let y = e.clientY - rect.top;
+  let cx = canvas.width / 2;
+  let cy = canvas.height / 2;
+  return Math.hypot(x - cx, y - cy);
+}
+
 canvas.addEventListener('mousedown', e=>{
   if(!imgLoaded) return;
-  drag = true;
-  startX = e.clientX;
+  isDragging = true;
+  startDist = getDistFromCenter(e);
 });
 
 canvas.addEventListener('mouseup', ()=>{
-  drag = false;
+  isDragging = false;
 });
 
 canvas.addEventListener('mouseleave', ()=>{
-  drag = false;
+  isDragging = false;
 });
 
 canvas.addEventListener('mousemove', e=>{
-  if(!drag || !imgLoaded) return;
-  let diff = (e.clientX - startX) / 200; // vitesse d'étirement
-  scaleX = Math.max(0.2, Math.min(3, 1 + diff));
+  if(!isDragging || !imgLoaded) return;
+
+  let dist = getDistFromCenter(e);
+  let factor = dist / startDist;
+
+  scaleX = Math.max(0.3, Math.min(3, factor));
+  scaleY = scaleX;
+
   draw();
 });
 
