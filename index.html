@@ -3,302 +3,93 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PixLab Web CapCut</title>
+<title>PixLab Editor</title>
 <style>
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #0f0f0f;
-    color: white;
-    overflow: hidden;
-}
-#editor {
-    position: relative;
-    width: 100vw;
-    height: 70vh;
-    background: #111;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    touch-action: none;
-}
-#image {
-    position: absolute;
-    transform-origin: center center;
-    max-width: none;
-    max-height: none;
-}
-#crop {
-    position: absolute;
-    border: 2px solid white;
-    box-sizing: border-box;
-    touch-action: none;
-}
-.handle {
-    width: 22px; height: 22px; background: white; border-radius: 50%;
-    position: absolute; transform: translate(-50%, -50%); touch-action: none;
-}
-.handle.tl { top:0; left:0; } .handle.tr { top:0; right:0; }
-.handle.bl { bottom:0; left:0; } .handle.br { bottom:0; right:0; }
-#tools {
-    position: fixed; bottom:0; left:0; right:0; height:30vh;
-    background:#111; display:flex; flex-wrap:wrap; padding:8px; gap:6px;
-    align-items:center; justify-content:center; border-top:1px solid #333;
-}
-button,input[type=range],select {
-    background:#222; border:none; padding:6px 10px; color:white; border-radius:8px; font-size:14px;
-}
-input[type=range]{width:100px;}
-#file{position:fixed;top:10px;left:10px;z-index:20;}
-.sticker, .textLayer {
-    position:absolute; cursor:move; user-select:none;
-}
+body {margin:0; font-family:Arial; background:#0f0f0f; color:white; overflow:hidden;}
+#editor {position:relative; width:100vw; height:80vh; background:#111; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+#image {position:absolute; transform-origin:center center; max-width:100%; max-height:100%;}
+#crop {position:absolute; border:2px solid white; box-sizing:border-box; touch-action:none;}
+.handle {width:20px; height:20px; background:white; border-radius:50%; position:absolute; transform:translate(-50%,-50%);}
+.handle.tl {top:0; left:0;} .handle.tr {top:0; right:0;} .handle.bl {bottom:0; left:0;} .handle.br {bottom:0; right:0;}
+#tools {position:fixed; bottom:0; left:0; right:0; height:20vh; background:#111; display:flex; flex-wrap:wrap; padding:5px; gap:5px; align-items:center; justify-content:center;}
+button,input[type=range]{background:#222; border:none; padding:6px 10px; color:white; border-radius:6px;}
+input[type=range]{width:80px;}
+#file{position:fixed;top:10px;left:10px; z-index:20;}
 </style>
 </head>
 <body>
-
 <input type="file" id="file" accept="image/*">
-
 <div id="editor">
-    <img id="image">
-    <div id="crop"><div class="handle tl"></div><div class="handle tr"></div>
-        <div class="handle bl"></div><div class="handle br"></div></div>
+<img id="image">
+<div id="crop"><div class="handle tl"></div><div class="handle tr"></div><div class="handle bl"></div><div class="handle br"></div></div>
 </div>
-
 <div id="tools">
-<button id="exportBtn">Exporter</button>
-<button id="rotateLeft">⟲ 90°</button>
-<button id="rotateRight">⟳ 90°</button>
-<button id="flipH">Flip H</button>
-<button id="flipV">Flip V</button>
+<button id="exportBtn">Exporter PNG</button>
 <input type="range" id="radius" min="0" max="150" value="0" title="Border radius">
-<input type="range" id="brightness" min="0" max="200" value="100" title="Brightness">
-<input type="range" id="contrast" min="0" max="200" value="100" title="Contrast">
-<input type="range" id="saturation" min="0" max="200" value="100" title="Saturation">
-<select id="filter">
-<option value="none">Normal</option>
-<option value="grayscale(100%)">Noir/Blanc</option>
-<option value="sepia(80%)">Sepia</option>
-<option value="invert(100%)">Invert</option>
-</select>
-<button id="addText">Ajouter Texte</button>
-<button id="addSticker">Ajouter Sticker</button>
-<button id="undo">Undo</button>
-<button id="redo">Redo</button>
-<select id="cropShape">
-<option value="rect">Carré/Rect</option>
-<option value="circle">Cercle</option>
-<option value="16:9">16:9</option>
-<option value="4:3">4:3</option>
-</select>
 </div>
-
 <script>
-const img=document.getElementById("image"), crop=document.getElementById("crop");
+const img=document.getElementById("image");
+const crop=document.getElementById("crop");
 const radiusSlider=document.getElementById("radius");
-const exportBtn=document.getElementById("exportBtn");
-const rotateLeftBtn=document.getElementById("rotateLeft");
-const rotateRightBtn=document.getElementById("rotateRight");
-const flipHBtn=document.getElementById("flipH");
-const flipVBtn=document.getElementById("flipV");
-const brightnessSlider=document.getElementById("brightness");
-const contrastSlider=document.getElementById("contrast");
-const saturationSlider=document.getElementById("saturation");
-const filterSelect=document.getElementById("filter");
-const addTextBtn=document.getElementById("addText");
-const addStickerBtn=document.getElementById("addSticker");
-const undoBtn=document.getElementById("undo");
-const redoBtn=document.getElementById("redo");
-const cropShapeSelect=document.getElementById("cropShape");
+let imgX=0,imgY=0,scale=1,dragging=false,startX=0,startY=0;
 
-let scale=1,lastDist=0,dragging=false,startX=0,startY=0,imgX=0,imgY=0;
-let rotation=0,flipH=1,flipV=1;
-let history=[],redoStack=[];
-
-function saveHistory(){
-    const layers=[...document.querySelectorAll(".textLayer,.sticker")].map(e=>{
-        return {type:e.className,class:e.className,inner:e.innerText||"",src:e.src||"",x:e.style.left,y:e.style.top,fontSize:e.style.fontSize,color:e.style.color};
-    });
-    const data={scale,imgX,imgY,rotation,flipH,flipV,radius:radiusSlider.value,brightness:brightnessSlider.value,contrast:contrastSlider.value,saturation:saturationSlider.value,filter:filterSelect.value,layers};
-    history.push(JSON.stringify(data));
-    redoStack=[];
-}
-
-/* ========== LOAD IMAGE ========== */
 document.getElementById("file").onchange=e=>{
     const file=e.target.files[0];
     img.src=URL.createObjectURL(file);
     img.onload=()=>{
-        scale=1; rotation=0; imgX=0; imgY=0; flipH=flipV=1;
-        img.style.transform=`scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`;
+        // adapter l'image à l'écran
+        const editor=document.getElementById("editor");
+        const w=img.naturalWidth, h=img.naturalHeight;
+        const ew=editor.clientWidth, eh=editor.clientHeight;
+        let ratio=Math.min(ew/w, eh/h);
+        img.style.width=(w*ratio)+'px';
+        img.style.height=(h*ratio)+'px';
+        imgX=(ew-w*ratio)/2;
+        imgY=(eh-h*ratio)/2;
         img.style.left=imgX+'px'; img.style.top=imgY+'px';
-        crop.style.left='50px'; crop.style.top='50px'; crop.style.width='200px'; crop.style.height='200px'; crop.style.borderRadius='0px';
-        brightnessSlider.value=contrastSlider.value=saturationSlider.value=100;
-        filterSelect.value='none';
-        saveHistory();
+        scale=1;
+        // crop centré
+        crop.style.left=(imgX+50)+'px';
+        crop.style.top=(imgY+50)+'px';
+        crop.style.width='200px'; crop.style.height='200px';
+        crop.style.borderRadius='0px';
     }
 };
 
-/* ========= PINCH ZOOM ========= */
-document.addEventListener("touchmove",e=>{
-    if(e.touches.length===2){e.preventDefault();
-        const dx=e.touches[0].clientX-e.touches[1].clientX;
-        const dy=e.touches[0].clientY-e.touches[1].clientY;
-        const dist=Math.sqrt(dx*dx+dy*dy);
-        if(!lastDist) lastDist=dist;
-        scale+=(dist-lastDist)*0.005;
-        scale=Math.max(0.1,Math.min(5,scale));
-        img.style.transform=`scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`;
-        lastDist=dist;
-    }
-},{passive:false});
-document.addEventListener("touchend",()=>lastDist=0);
+// drag image
+document.addEventListener("mousedown",e=>{if(e.target===img){dragging=true; startX=e.clientX-imgX; startY=e.clientY-imgY;}});
+document.addEventListener("mousemove",e=>{if(dragging){imgX=e.clientX-startX; imgY=e.clientY-startY; img.style.left=imgX+'px'; img.style.top=imgY+'px';}});
+document.addEventListener("mouseup",()=>dragging=false);
 
-/* ========= DRAG IMAGE ========= */
-document.addEventListener("touchstart",e=>{if(e.touches.length===1){dragging=true;startX=e.touches[0].clientX-imgX;startY=e.touches[0].clientY-imgY;}});
-document.addEventListener("touchmove",e=>{if(dragging&&e.touches.length===1){imgX=e.touches[0].clientX-startX; imgY=e.touches[0].clientY-startY; img.style.left=imgX+'px'; img.style.top=imgY+'px';}});
-document.addEventListener("touchend",()=>dragging=false);
-
-/* ========= HANDLE RESIZE ========= */
-let resizing=false,currentHandle=null;
-document.querySelectorAll(".handle").forEach(h=>{h.addEventListener("touchstart",e=>{e.stopPropagation();resizing=true;currentHandle=h;});});
-document.addEventListener("touchmove",e=>{if(!resizing)return;
-const r=crop.getBoundingClientRect(),x=e.touches[0].clientX,y=e.touches[0].clientY;
-if(currentHandle.classList.contains("tr")){crop.style.width=(x-r.left)+'px'; crop.style.height=(r.bottom-y)+'px'; crop.style.top=y+'px';}
-if(currentHandle.classList.contains("tl")){crop.style.width=(r.right-x)+'px'; crop.style.height=(r.bottom-y)+'px'; crop.style.left=x+'px'; crop.style.top=y+'px';}
-if(currentHandle.classList.contains("bl")){crop.style.width=(r.right-x)+'px'; crop.style.height=(y-r.top)+'px'; crop.style.left=x+'px';}
-if(currentHandle.classList.contains("br")){crop.style.width=(x-r.left)+'px'; crop.style.height=(y-r.top)+'px';}
-},{passive:false});
-document.addEventListener("touchend",()=>resizing=false);
-
-/* ========= BORDER RADIUS ========= */
+// border radius
 radiusSlider.oninput=()=>crop.style.borderRadius=radiusSlider.value+'px';
 
-/* ========= ROTATION ========= */
-rotateLeftBtn.onclick=()=>{rotation-=90; img.style.transform=`scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`; saveHistory();};
-rotateRightBtn.onclick=()=>{rotation+=90; img.style.transform=`scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`; saveHistory();};
-
-/* ========= FLIP ========= */
-flipHBtn.onclick=()=>{flipH*=-1; img.style.transform=`scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`; saveHistory();};
-flipVBtn.onclick=()=>{flipV*=-1; img.style.transform=`scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`; saveHistory();};
-
-/* ========= FILTERS ========= */
-[brightnessSlider,contrastSlider,saturationSlider,filterSelect].forEach(el=>{el.oninput=()=>{img.style.filter=`brightness(${brightnessSlider.value}%) contrast(${contrastSlider.value}%) saturate(${saturationSlider.value}%) ${filterSelect.value}`; saveHistory();}});
-
-/* ========= UNDO / REDO ========= */
-undoBtn.onclick=()=>{if(history.length>1){redoStack.push(history.pop()); const state=JSON.parse(history[history.length-1]); applyState(state);}};
-redoBtn.onclick=()=>{if(redoStack.length){const state=JSON.parse(redoStack.pop()); history.push(JSON.stringify(state)); applyState(state);}};
-function applyState(s){
-scale=s.scale; imgX=s.imgX; imgY=s.imgY; rotation=s.rotation; flipH=s.flipH; flipV=s.flipV;
-img.style.left=imgX+'px'; img.style.top=imgY+'px';
-img.style.transform=`scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`;
-radiusSlider.value=s.radius; crop.style.borderRadius=s.radius+'px';
-brightnessSlider.value=s.brightness; contrastSlider.value=s.contrast; saturationSlider.value=s.saturation;
-filterSelect.value=s.filter;
-img.style.filter=`brightness(${s.brightness}%) contrast(${s.contrast}%) saturate(${s.saturation}%) ${s.filter}`;
-
-// restore layers
-document.querySelectorAll(".textLayer,.sticker").forEach(e=>e.remove());
-s.layers.forEach(l=>{
-    if(l.type.includes("textLayer")){
-        const t=document.createElement("div");
-        t.className="textLayer"; t.innerText=l.inner; t.style.left=l.x; t.style.top=l.y;
-        t.style.fontSize=l.fontSize; t.style.color=l.color; document.getElementById("editor").appendChild(t);
-    }else{
-        const sE=document.createElement("img");
-        sE.className="sticker"; sE.src=l.src; sE.style.left=l.x; sE.style.top=l.y;
-        document.getElementById("editor").appendChild(sE);
-    }
-});
-}
-
-/* ========= ADD TEXT ========= */
-addTextBtn.onclick=()=>{
-    const text=prompt("Texte à ajouter"); if(!text) return;
-    const span=document.createElement("div"); span.className="textLayer"; span.innerText=text;
-    span.style.left="60px"; span.style.top="60px"; span.style.color="white"; span.style.fontSize="24px"; document.getElementById("editor").appendChild(span);
-    // drag text
-    let tDrag=false,tX=0,tY=0;
-    span.addEventListener("mousedown",(e)=>{tDrag=true;tX=e.offsetX;tY=e.offsetY;});
-    document.addEventListener("mousemove",(e)=>{if(tDrag){span.style.left=(e.pageX-tX)+'px'; span.style.top=(e.pageY-tY)+'px';}});
-    document.addEventListener("mouseup",()=>{tDrag=false;});
-    saveHistory();
-};
-
-/* ========= ADD STICKER ========= */
-addStickerBtn.onclick=()=>{
-    const url=prompt("URL du sticker:"); if(!url) return;
-    const sE=document.createElement("img"); sE.className="sticker"; sE.src=url;
-    sE.style.left="60px"; sE.style.top="60px"; sE.style.width="60px"; sE.style.height="60px";
-    document.getElementById("editor").appendChild(sE);
-    // drag sticker
-    let tDrag=false,tX=0,tY=0;
-    sE.addEventListener("mousedown",(e)=>{tDrag=true;tX=e.offsetX;tY=e.offsetY;});
-    document.addEventListener("mousemove",(e)=>{if(tDrag){sE.style.left=(e.pageX-tX)+'px'; sE.style.top=(e.pageY-tY)+'px';}});
-    document.addEventListener("mouseup",()=>{tDrag=false;});
-    saveHistory();
-};
-
-/* ========= CROP SHAPE ========= */
-cropShapeSelect.onchange=()=>{
-    const val=cropShapeSelect.value;
-    if(val==='circle'){crop.style.borderRadius='50%';}else if(val==='rect'){crop.style.borderRadius='0%';}else if(val==='16:9'){crop.style.height=(crop.offsetWidth*9/16)+'px'; crop.style.borderRadius='0';}
-    else if(val==='4:3'){crop.style.height=(crop.offsetWidth*3/4)+'px'; crop.style.borderRadius='0';}
-};
-
-/* ========= EXPORT ========= */
-exportBtn.onclick=()=>{
-    if(!img.src) return alert("Importe d'abord une image !");
+// export
+document.getElementById("exportBtn").onclick=()=>{
     const r=crop.getBoundingClientRect();
-    const editorRect=document.getElementById("editor").getBoundingClientRect();
-    const canvas=document.createElement("canvas"); canvas.width=r.width; canvas.height=r.height;
+    const editor=document.getElementById("editor").getBoundingClientRect();
+    const canvas=document.createElement("canvas");
+    canvas.width=r.width; canvas.height=r.height;
     const ctx=canvas.getContext("2d");
 
     // clipping
     const radius=parseInt(radiusSlider.value);
-    if(radius>0 || cropShapeSelect.value==='circle'){
+    if(radius>0){
         ctx.beginPath();
-        if(cropShapeSelect.value==='circle'){
-            ctx.arc(canvas.width/2,canvas.height/2,canvas.width/2,0,Math.PI*2); 
-        }else{
-            ctx.moveTo(radius,0); ctx.lineTo(canvas.width-radius,0);
-            ctx.quadraticCurveTo(canvas.width,0,canvas.width,radius);
-            ctx.lineTo(canvas.width,canvas.height-radius); ctx.quadraticCurveTo(canvas.width,canvas.height,canvas.width-radius,canvas.height);
-            ctx.lineTo(radius,canvas.height); ctx.quadraticCurveTo(0,canvas.height,0,canvas.height-radius);
-            ctx.lineTo(0,radius); ctx.quadraticCurveTo(0,0,radius,0);
-        }
+        ctx.moveTo(radius,0); ctx.lineTo(canvas.width-radius,0);
+        ctx.quadraticCurveTo(canvas.width,0,canvas.width,radius);
+        ctx.lineTo(canvas.width,canvas.height-radius); ctx.quadraticCurveTo(canvas.width,canvas.height,canvas.width-radius,canvas.height);
+        ctx.lineTo(radius,canvas.height); ctx.quadraticCurveTo(0,canvas.height,0,canvas.height-radius);
+        ctx.lineTo(0,radius); ctx.quadraticCurveTo(0,0,radius,0);
         ctx.closePath(); ctx.clip();
     }
 
-    const imgRect=img.getBoundingClientRect();
-    const offsetX=r.left-imgRect.left;
-    const offsetY=r.top-imgRect.top;
-
-    ctx.save();
-    ctx.translate(canvas.width/2,canvas.height/2);
-    ctx.rotate(rotation*Math.PI/180);
-    ctx.scale(flipH,flipV);
-    ctx.filter=`brightness(${brightnessSlider.value}%) contrast(${contrastSlider.value}%) saturate(${saturationSlider.value}%) ${filterSelect.value}`;
-    ctx.drawImage(img,-img.width/2+offsetX,-img.height/2+offsetY,img.width*scale,img.height*scale);
-    ctx.restore();
-
-    // draw texts and stickers
-    document.querySelectorAll(".textLayer,.sticker").forEach(l=>{
-        if(l.classList.contains("textLayer")){
-            ctx.fillStyle=l.style.color||"white";
-            ctx.font=(l.style.fontSize||"24px")+" Arial";
-            ctx.fillText(l.innerText,parseInt(l.style.left)-r.left,parseInt(l.style.top)-r.top+24);
-        }else{
-            const lImg=new Image();
-            lImg.src=l.src;
-            ctx.drawImage(lImg,parseInt(l.style.left)-r.left,parseInt(l.style.top)-r.top,parseInt(l.style.width||60),parseInt(l.style.height||60));
-        }
-    });
-
-    const dataURL=canvas.toDataURL("image/png");
+    const offsetX=r.left-editor.left;
+    const offsetY=r.top-editor.top;
+    ctx.drawImage(img,-offsetX,-offsetY,img.width,img.height);
     const link=document.createElement("a");
-    link.href=dataURL; link.download="pixlab.png"; link.click();
+    link.href=canvas.toDataURL("image/png");
+    link.download="pixlab.png"; link.click();
 };
 </script>
 </body>
