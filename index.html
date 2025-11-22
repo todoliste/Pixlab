@@ -1,1610 +1,226 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PixLab - Éditeur Photo Pro</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<title>PixLab – Photo Editor</title>
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #0a0a0a;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+    }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0a0a0a;
-            min-height: 100vh;
-            color: #fff;
-            overflow-x: hidden;
-        }
+    header {
+        padding: 15px 25px;
+        background: #000;
+        font-size: 26px;
+        font-weight: bold;
+        border-bottom: 1px solid #222;
+        letter-spacing: 1px;
+    }
 
-        .header {
-            background: #1a1a1a;
-            border-bottom: 1px solid #2a2a2a;
-            padding: 16px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
+    #editor {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+        background: #111;
+    }
 
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+    #cropContainer {
+        position: relative;
+        max-width: 80%;
+        max-height: 80%;
+        overflow: hidden;
+        border: 1px dashed #555;
+    }
 
-        .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23fff" x="10" y="25" width="80" height="50" rx="8"/><circle fill="%23fff" cx="50" cy="50" r="18"/><path fill="%230a0a0a" d="M50,35 L58,42 L58,58 L50,65 L42,58 L42,42 Z"/><rect fill="%23fff" x="70" y="30" width="8" height="8" rx="2"/></svg>') center/contain no-repeat;
-        }
+    #imageDisplay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        transform-origin: center center;
+        cursor: grab;
+        user-select: none;
+    }
 
-        .logo-text {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
+    #cropArea {
+        border: 2px solid #00d4ff;
+        position: absolute;
+        resize: both;
+        overflow: hidden;
+        pointer-events: auto;
+    }
 
-        .upload-screen {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: calc(100vh - 73px);
-            padding: 40px 20px;
-        }
+    footer {
+        padding: 15px;
+        background: #000;
+        border-top: 1px solid #222;
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+    }
 
-        .upload-area {
-            border: 3px dashed #333;
-            border-radius: 20px;
-            padding: 80px 60px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: #141414;
-            max-width: 600px;
-            width: 100%;
-        }
+    button {
+        padding: 12px 18px;
+        background: #00d4ff;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 15px;
+        color: #000;
+        font-weight: bold;
+        transition: 0.2s;
+    }
 
-        .upload-area:hover {
-            border-color: #555;
-            background: #1a1a1a;
-            transform: translateY(-2px);
-        }
+    button:hover {
+        opacity: 0.8;
+    }
 
-        .upload-icon {
-            font-size: 64px;
-            margin-bottom: 24px;
-            filter: grayscale(100%);
-        }
-
-        .upload-text {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: #fff;
-        }
-
-        .upload-hint {
-            color: #666;
-            font-size: 14px;
-        }
-
-        #fileInput {
-            display: none;
-        }
-
-        .editor {
-            display: none;
-            height: calc(100vh - 73px);
-        }
-
-        .editor.active {
-            display: flex;
-        }
-
-        .sidebar {
-            width: 280px;
-            background: #141414;
-            border-right: 1px solid #2a2a2a;
-            overflow-y: auto;
-            padding: 20px;
-        }
-
-        .tool-section {
-            margin-bottom: 24px;
-        }
-
-        .tool-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-        }
-
-        .tool-btn {
-            width: 100%;
-            padding: 12px 16px;
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            border-radius: 8px;
-            color: #aaa;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 8px;
-            text-align: left;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .tool-btn:hover {
-            background: #222;
-            color: #fff;
-            border-color: #3a3a3a;
-        }
-
-        .tool-btn.active {
-            background: #fff;
-            color: #0a0a0a;
-            border-color: #fff;
-        }
-
-        .canvas-area {
-            flex: 1;
-            background: #0a0a0a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .canvas-container {
-            position: relative;
-            display: inline-block;
-        }
-
-        #canvas {
-            max-width: 90vw;
-            max-height: calc(100vh - 200px);
-            display: block;
-            border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-        }
-
-        .crop-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-
-        .crop-area {
-            position: absolute;
-            border: 2px solid #fff;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
-            cursor: move;
-            pointer-events: all;
-            transition: border-radius 0.2s;
-        }
-
-        .resize-handle {
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            background: #fff;
-            border: 2px solid #0a0a0a;
-            border-radius: 50%;
-            pointer-events: all;
-        }
-
-        .handle-tl { top: -6px; left: -6px; cursor: nw-resize; }
-        .handle-tr { top: -6px; right: -6px; cursor: ne-resize; }
-        .handle-bl { bottom: -6px; left: -6px; cursor: sw-resize; }
-        .handle-br { bottom: -6px; right: -6px; cursor: se-resize; }
-        .handle-t { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
-        .handle-b { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
-        .handle-l { left: -6px; top: 50%; transform: translateY(-50%); cursor: w-resize; }
-        .handle-r { right: -6px; top: 50%; transform: translateY(-50%); cursor: e-resize; }
-
-        .controls-panel {
-            width: 320px;
-            background: #141414;
-            border-left: 1px solid #2a2a2a;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .control-group {
-            margin-bottom: 24px;
-        }
-
-        .control-label {
-            font-size: 13px;
-            font-weight: 500;
-            color: #aaa;
-            margin-bottom: 8px;
-            display: block;
-        }
-
-        .slider-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        input[type="range"] {
-            flex: 1;
-            height: 4px;
-            background: #2a2a2a;
-            border-radius: 2px;
-            outline: none;
-            -webkit-appearance: none;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            background: #fff;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        input[type="range"]::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
-            background: #fff;
-            border-radius: 50%;
-            cursor: pointer;
-            border: none;
-        }
-
-        .value-display {
-            font-size: 13px;
-            font-weight: 600;
-            color: #fff;
-            min-width: 45px;
-            text-align: right;
-        }
-
-        .action-btns {
-            display: flex;
-            gap: 8px;
-            padding: 20px;
-            background: #1a1a1a;
-            border-top: 1px solid #2a2a2a;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background: #fff;
-            color: #0a0a0a;
-        }
-
-        .btn-primary:hover {
-            background: #e0e0e0;
-            transform: translateY(-1px);
-        }
-
-        .btn-secondary {
-            background: #2a2a2a;
-            color: #fff;
-        }
-
-        .btn-secondary:hover {
-            background: #333;
-        }
-
-        .aspect-btns {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-        }
-
-        .aspect-btn {
-            padding: 8px;
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            border-radius: 6px;
-            color: #aaa;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .aspect-btn:hover {
-            background: #222;
-            color: #fff;
-        }
-
-        .aspect-btn.active {
-            background: #fff;
-            color: #0a0a0a;
-            border-color: #fff;
-        }
-
-        .filter-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-        }
-
-        .filter-btn {
-            padding: 32px 12px;
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            border-radius: 8px;
-            color: #aaa;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-        }
-
-        .filter-btn:hover {
-            background: #222;
-            color: #fff;
-        }
-
-        .filter-btn.active {
-            background: #fff;
-            color: #0a0a0a;
-            border-color: #fff;
-        }
-
-        @media (max-width: 1024px) {
-            .sidebar, .controls-panel {
-                width: 240px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .editor {
-                flex-direction: column;
-            }
-
-            .sidebar {
-                width: 100%;
-                max-height: 150px;
-                border-right: none;
-                border-bottom: 1px solid #2a2a2a;
-                display: flex;
-                overflow-x: auto;
-                padding: 12px;
-            }
-
-            .tool-section {
-                margin: 0 12px 0 0;
-                min-width: 120px;
-            }
-
-            .controls-panel {
-                width: 100%;
-                max-height: 200px;
-                border-left: none;
-                border-top: 1px solid #2a2a2a;
-            }
-
-            .canvas-area {
-                flex: 1;
-            }
-        }
-    </style>
+    #fileInput {
+        display: none;
+    }
+</style>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">
-            <div class="logo-icon"></div>
-            <div class="logo-text">PixLab</div>
-        </div>
+
+<header>📸 PixLab</header>
+
+<div id="editor">
+    <div id="cropContainer">
+        <img id="imageDisplay">
+        <div id="cropArea" style="width:150px; height:150px; top:50px; left:50px;"></div>
     </div>
-
-    <div class="upload-screen" id="uploadScreen">
-        <div class="upload-area" id="uploadArea">
-            <div class="upload-icon">📸</div>
-            <div class="upload-text">Importez votre photo</div>
-            <div class="upload-hint">PNG, JPG, WEBP • Glissez-déposez ou cliquez</div>
-            <input type="file" id="fileInput" accept="image/*">
-        </div>
-    </div>
-
-    <div class="editor" id="editor">
-        <div class="sidebar">
-            <div class="tool-section">
-                <div class="tool-title">Outils</div>
-                <button class="tool-btn active" onclick="selectTool('crop')">✂️ Recadrer</button>
-                <button class="tool-btn" onclick="selectTool('adjust')">🎨 Ajuster</button>
-                <button class="tool-btn" onclick="selectTool('filters')">✨ Filtres</button>
-                <button class="tool-btn" onclick="selectTool('effects')">💫 Effets</button>
-            </div>
-            <div class="tool-section">
-                <div class="tool-title">Fichier</div>
-                <button class="tool-btn" onclick="resetAll()">🔄 Réinitialiser</button>
-                <button class="tool-btn" onclick="newImage()">📁 Nouvelle image</button>
-            </div>
-        </div>
-
-        <div class="canvas-area">
-            <div class="canvas-container" id="canvasContainer">
-                <canvas id="canvas"></canvas>
-                <div class="crop-overlay" id="cropOverlay" style="display: none;">
-                    <div class="crop-area" id="cropArea">
-                        <div class="resize-handle handle-tl"></div>
-                        <div class="resize-handle handle-tr"></div>
-                        <div class="resize-handle handle-bl"></div>
-                        <div class="resize-handle handle-br"></div>
-                        <div class="resize-handle handle-t"></div>
-                        <div class="resize-handle handle-b"></div>
-                        <div class="resize-handle handle-l"></div>
-                        <div class="resize-handle handle-r"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="controls-panel" id="controlsPanel">
-            <!-- Crop Controls -->
-            <div id="cropControls">
-                <div class="control-group">
-                    <label class="control-label">Proportions</label>
-                    <div class="aspect-btns">
-                        <button class="aspect-btn active" onclick="setAspect('free')">Libre</button>
-                        <button class="aspect-btn" onclick="setAspect('1:1')">1:1</button>
-                        <button class="aspect-btn" onclick="setAspect('4:3')">4:3</button>
-                        <button class="aspect-btn" onclick="setAspect('16:9')">16:9</button>
-                        <button class="aspect-btn" onclick="setAspect('9:16')">9:16</button>
-                        <button class="aspect-btn" onclick="setAspect('3:4')">3:4</button>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">Coins ronds</label>
-                    <div class="slider-container">
-                        <input type="range" id="cornerRadius" min="0" max="200" value="0">
-                        <span class="value-display" id="cornerValue">0</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">Adoucissement</label>
-                    <div class="slider-container">
-                        <input type="range" id="feather" min="0" max="100" value="0">
-                        <span class="value-display" id="featherValue">0</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">Opacité masque</label>
-                    <div class="slider-container">
-                        <input type="range" id="maskOpacity" min="0" max="100" value="70">
-                        <span class="value-display" id="maskValue">70%</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Adjust Controls -->
-            <div id="adjustControls" style="display: none;">
-                <div class="control-group">
-                    <label class="control-label">Luminosité</label>
-                    <div class="slider-container">
-                        <input type="range" id="brightness" min="-100" max="100" value="0">
-                        <span class="value-display" id="brightnessValue">0</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">Contraste</label>
-                    <div class="slider-container">
-                        <input type="range" id="contrast" min="-100" max="100" value="0">
-                        <span class="value-display" id="contrastValue">0</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">Saturation</label>
-                    <div class="slider-container">
-                        <input type="range" id="saturation" min="-100" max="100" value="0">
-                        <span class="value-display" id="saturationValue">0</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">Netteté</label>
-                    <div class="slider-container">
-                        <input type="range" id="sharpness" min="0" max="100" value="0">
-                        <span class="value-display" id="sharpnessValue">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Filters Controls -->
-            <div id="filtersControls" style="display: none;">
-                <div class="control-group">
-                    <label class="control-label">Filtres</label>
-                    <div class="filter-grid">
-                        <button class="filter-btn active" onclick="applyFilter('none')">Original</button>
-                        <button class="filter-btn" onclick="applyFilter('grayscale')">N&B</button>
-                        <button class="filter-btn" onclick="applyFilter('sepia')">Sépia</button>
-                        <button class="filter-btn" onclick="applyFilter('vintage')">Vintage</button>
-                        <button class="filter-btn" onclick="applyFilter('warm')">Chaud</button>
-                        <button class="filter-btn" onclick="applyFilter('cool')">Froid</button>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">Intensité</label>
-                    <div class="slider-container">
-                        <input type="range" id="filterIntensity" min="0" max="100" value="100">
-                        <span class="value-display" id="filterIntensityValue">100%</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Effects Controls -->
-            <div id="effectsControls" style="display: none;">
-                <div class="control-group">
-                    <label class="control-label">Flou</label>
-                    <div class="slider-container">
-                        <input type="range" id="blur" min="0" max="20" value="0">
-                        <span class="value-display" id="blurValue">0</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">Vignette</label>
-                    <div class="slider-container">
-                        <input type="range" id="vignette" min="0" max="100" value="0">
-                        <span class="value-display" id="vignetteValue">0</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">Grain</label>
-                    <div class="slider-container">
-                        <input type="range" id="noise" min="0" max="100" value="0">
-                        <span class="value-display" id="noiseValue">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="action-btns">
-                <button class="btn btn-secondary" onclick="downloadImage()">💾 Sauvegarder</button>
-                <button class="btn btn-primary" onclick="applyChanges()">✓ Appliquer</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const fileInput = document.getElementById('fileInput');
-        const uploadArea = document.getElementById('uploadArea');
-        const uploadScreen = document.getElementById('uploadScreen');
-        const editor = document.getElementById('editor');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const cropOverlay = document.getElementById('cropOverlay');
-        const cropArea = document.getElementById('cropArea');
-
-        let img = new Image();
-        let originalImageData = null;
-        let currentTool = 'crop';
-        let aspectRatio = null;
-        let isDragging = false;
-        let isResizing = false;
-        let currentHandle = null;
-        let startX, startY, startCropX, startCropY, startCropW, startCropH;
-
-        // Adjustments
-        let adjustments = {
-            brightness: 0,
-            contrast: 0,
-            saturation: 0,
-            sharpness: 0,
-            blur: 0,
-            vignette: 0,
-            noise: 0,
-            filter: 'none',
-            filterIntensity: 1
-        };
-
-        // Upload
-        uploadArea.addEventListener('click', () => fileInput.click());
-        uploadArea.addEventListener('dragover', (e) => e.preventDefault());
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) loadImage(file);
-        });
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) loadImage(e.target.files[0]);
-        });
-
-        function loadImage(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                img.onload = () => {
-                    setupCanvas();
-                    uploadScreen.style.display = 'none';
-                    editor.classList.add('active');
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function setupCanvas() {
-            const maxWidth = window.innerWidth * 0.7;
-            const maxHeight = window.innerHeight * 0.7;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > maxWidth) {
-                height = (height * maxWidth) / width;
-                width = maxWidth;
-            }
-            if (height > maxHeight) {
-                width = (width * maxHeight) / height;
-                height = maxHeight;
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-            originalImageData = ctx.getImageData(0, 0, width, height);
-            
-            resetCropArea();
-        }
-
-        function resetCropArea() {
-            cropArea.style.left = '0px';
-            cropArea.style.top = '0px';
-            cropArea.style.width = canvas.width + 'px';
-            cropArea.style.height = canvas.height + 'px';
-        }
-
-        // Tool Selection
-        function selectTool(tool) {
-            currentTool = tool;
-            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-
-            document.getElementById('cropControls').style.display = tool === 'crop' ? 'block' : 'none';
-            document.getElementById('adjustControls').style.display = tool === 'adjust' ? 'block' : 'none';
-            document.getElementById('filtersControls').style.display = tool === 'filters' ? 'block' : 'none';
-            document.getElementById('effectsControls').style.display = tool === 'effects' ? 'block' : 'none';
-
-            cropOverlay.style.display = tool === 'crop' ? 'block' : 'none';
-        }
-
-        // Aspect Ratio
-        function setAspect(ratio) {
-            document.querySelectorAll('.aspect-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-
-            if (ratio === 'free') {
-                aspectRatio = null;
-            } else {
-                const [w, h] = ratio.split(':').map(Number);
-                aspectRatio = w / h;
-                adjustCropToAspect();
-            }
-        }
-
-        function adjustCropToAspect() {
-            const w = parseFloat(cropArea.style.width);
-            const h = parseFloat(cropArea.style.height);
-            const cx = parseFloat(cropArea.style.left) + w / 2;
-            const cy = parseFloat(cropArea.style.top) + h / 2;
-
-            let newW, newH;
-            if (w / h > aspectRatio) {
-                newH = h;
-                newW = newH * aspectRatio;
-            } else {
-                newW = w;
-                newH = newW / aspectRatio;
-            }
-
-            cropArea.style.width = newW + 'px';
-            cropArea.style.height = newH + 'px';
-            cropArea.style.left = (cx - newW / 2) + 'px';
-            cropArea.style.top = (cy - newH / 2) + 'px';
-        }
-
-        // Sliders
-        ['cornerRadius', 'feather', 'maskOpacity', 'brightness', 'contrast', 'saturation', 'sharpness', 'blur', 'vignette', 'noise', 'filterIntensity'].forEach(id => {
-            const slider = document.getElementById(id);
-            if (!slider) return;
-            
-            slider.addEventListener('input', (e) => {
-                const value = e.target.value;
-                const display = document.getElementById(id + 'Value');
-                
-                if (id === 'cornerRadius') {
-                    display.textContent = value;
-                    cropArea.style.borderRadius = value + 'px';
-                } else if (id === 'feather') {
-                    display.textContent = value;
-                } else if (id === 'maskOpacity') {
-                    display.textContent = value + '%';
-                    cropArea.style.boxShadow = `0 0 0 9999px rgba(0,0,0,${value/100})`;
-                } else if (id === 'filterIntensity') {
-                    display.textContent = value + '%';
-                    adjustments.filterIntensity = value / 100;
-                    applyAllAdjustments();
-                } else {
-                    display.textContent = value;
-                    adjustments[id] = parseInt(value);
-                    applyAllAdjustments();
-                }
-            });
-        });
-
-        // Crop drag/resize
-        cropArea.addEventListener('mousedown', handleCropStart);
-        cropArea.addEventListener('touchstart', handleCropStart, { passive: false });
-
-        function handleCropStart(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            let clientX, clientY;
-            if (e.type === 'touchstart') {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-            } else {
-                clientX = e.clientX;
-                clientY = e.clientY;
-            }
-            
-            if (e.target.classList.contains('resize-handle')) {
-                isResizing = true;
-                currentHandle = e.target;
-            } else {
-                isDragging = true;
-            }
-            
-            startX = clientX;
-            startY = clientY;
-            startCropX = parseFloat(cropArea.style.left);
-            startCropY = parseFloat(cropArea.style.top);
-            startCropW = parseFloat(cropArea.style.width);
-            startCropH = parseFloat(cropArea.style.height);
-        }
-
-        document.addEventListener('mousemove', handleMove);
-        document.addEventListener('touchmove', handleMove, { passive: false });
-
-        function handleMove(e) {
-            if (!isDragging && !isResizing) return;
-            e.preventDefault();
-            
-            let clientX, clientY;
-            if (e.type === 'touchmove') {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-            } else {
-                clientX = e.clientX;
-                clientY = e.clientY;
-            }
-            
-            if (isDragging) {
-                const dx = clientX - startX;
-                const dy = clientY - startY;
-                
-                let newLeft = Math.max(0, Math.min(startCropX + dx, canvas.width - startCropW));
-                let newTop = Math.max(0, Math.min(startCropY + dy, canvas.height - startCropH));
-                
-                cropArea.style.left = newLeft + 'px';
-                cropArea.style.top = newTop + 'px';
-            } else if (isResizing) {
-                handleResize(clientX, clientY);
-            }
-        }
-
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-            isResizing = false;
-        });
-        document.addEventListener('touchend', () => {
-            isDragging = false;
-            isResizing = false;
-        });
-
-        function handleResize(clientX, clientY) {
-            const dx = clientX - startX;
-            const dy = clientY - startY;
-            
-            let newX = startCropX;
-            let newY = startCropY;
-            let newW = startCropW;
-            let newH = startCropH;
-            
-            const hc = current<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PixLab - Éditeur Photo Pro</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0a0a0a;
-            min-height: 100vh;
-            color: #fff;
-            overflow-x: hidden;
-        }
-
-        .header {
-            background: #1a1a1a;
-            border-bottom: 1px solid #2a2a2a;
-            padding: 16px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%23fff" x="10" y="25" width="80" height="50" rx="8"/><circle fill="%23fff" cx="50" cy="50" r="18"/><path fill="%230a0a0a" d="M50,35 L58,42 L58,58 L50,65 L42,58 L42,42 Z"/><rect fill="%23fff" x="70" y="30" width="8" height="8" rx="2"/></svg>') center/contain no-repeat;
-        }
-
-        .logo-text {
-            font-size: 24px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        .upload-screen {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: calc(100vh - 73px);
-            padding: 40px 20px;
-        }
-
-        .upload-area {
-            border: 3px dashed #333;
-            border-radius: 20px;
-            padding: 80px 60px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: #141414;
-            max-width: 600px;
-            width: 100%;
-        }
-
-        .upload-area:hover {
-            border-color: #555;
-            background: #1a1a1a;
-            transform: translateY(-2px);
-        }
-
-        .upload-icon {
-            font-size: 64px;
-            margin-bottom: 24px;
-        }
-
-        .upload-text {
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: #fff;
-        }
-
-        .upload-hint {
-            color: #666;
-            font-size: 14px;
-        }
-
-        #fileInput {
-            display: none;
-        }
-
-        .editor {
-            display: none;
-            height: calc(100vh - 73px);
-        }
-
-        .editor.active {
-            display: flex;
-        }
-
-        .sidebar {
-            width: 260px;
-            background: #141414;
-            border-right: 1px solid #2a2a2a;
-            overflow-y: auto;
-            padding: 20px;
-        }
-
-        .tool-section {
-            margin-bottom: 24px;
-        }
-
-        .tool-title {
-            font-size: 11px;
-            font-weight: 600;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-        }
-
-        .tool-btn {
-            width: 100%;
-            padding: 12px 16px;
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            border-radius: 8px;
-            color: #aaa;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 8px;
-            text-align: left;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .tool-btn:hover {
-            background: #222;
-            color: #fff;
-            border-color: #3a3a3a;
-        }
-
-        .tool-btn.active {
-            background: #fff;
-            color: #0a0a0a;
-            border-color: #fff;
-        }
-
-        .canvas-area {
-            flex: 1;
-            background: #0a0a0a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: auto;
-        }
-
-        .canvas-container {
-            position: relative;
-            display: inline-block;
-        }
-
-        #canvas {
-            display: block;
-            border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-        }
-
-        .crop-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-
-        .crop-area {
-            position: absolute;
-            border: 2px solid #fff;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
-            cursor: move;
-            pointer-events: all;
-            transition: border-radius 0.2s;
-        }
-
-        .resize-handle {
-            position: absolute;
-            width: 14px;
-            height: 14px;
-            background: #fff;
-            border: 2px solid #0a0a0a;
-            border-radius: 50%;
-            pointer-events: all;
-        }
-
-        .handle-tl { top: -7px; left: -7px; cursor: nw-resize; }
-        .handle-tr { top: -7px; right: -7px; cursor: ne-resize; }
-        .handle-bl { bottom: -7px; left: -7px; cursor: sw-resize; }
-        .handle-br { bottom: -7px; right: -7px; cursor: se-resize; }
-        .handle-t { top: -7px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
-        .handle-b { bottom: -7px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
-        .handle-l { left: -7px; top: 50%; transform: translateY(-50%); cursor: w-resize; }
-        .handle-r { right: -7px; top: 50%; transform: translateY(-50%); cursor: e-resize; }
-
-        .controls-panel {
-            width: 300px;
-            background: #141414;
-            border-left: 1px solid #2a2a2a;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .control-group {
-            margin-bottom: 20px;
-        }
-
-        .control-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: #aaa;
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        .slider-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        input[type="range"] {
-            flex: 1;
-            height: 4px;
-            background: #2a2a2a;
-            border-radius: 2px;
-            outline: none;
-            -webkit-appearance: none;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            background: #fff;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        input[type="range"]::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
-            background: #fff;
-            border-radius: 50%;
-            cursor: pointer;
-            border: none;
-        }
-
-        .value-display {
-            font-size: 12px;
-            font-weight: 600;
-            color: #fff;
-            min-width: 40px;
-            text-align: right;
-        }
-
-        .action-btns {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background: #fff;
-            color: #0a0a0a;
-        }
-
-        .btn-primary:hover {
-            background: #e0e0e0;
-        }
-
-        .btn-secondary {
-            background: #2a2a2a;
-            color: #fff;
-        }
-
-        .btn-secondary:hover {
-            background: #333;
-        }
-
-        .aspect-btns {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 6px;
-        }
-
-        .aspect-btn {
-            padding: 8px;
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            border-radius: 6px;
-            color: #aaa;
-            font-size: 11px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .aspect-btn:hover {
-            background: #222;
-            color: #fff;
-        }
-
-        .aspect-btn.active {
-            background: #fff;
-            color: #0a0a0a;
-        }
-
-        .filter-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-        }
-
-        .filter-btn {
-            padding: 24px 8px;
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            border-radius: 8px;
-            color: #aaa;
-            font-size: 11px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-        }
-
-        .filter-btn:hover {
-            background: #222;
-            color: #fff;
-        }
-
-        .filter-btn.active {
-            background: #fff;
-            color: #0a0a0a;
-        }
-
-        @media (max-width: 768px) {
-            .sidebar, .controls-panel {
-                display: none;
-            }
-            
-            .canvas-area {
-                width: 100%;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div class="logo">
-            <div class="logo-icon"></div>
-            <div class="logo-text">PixLab</div>
-        </div>
-    </div>
-
-    <div class="upload-screen" id="uploadScreen">
-        <div class="upload-area" id="uploadArea">
-            <div class="upload-icon">📸</div>
-            <div class="upload-text">Importez votre photo</div>
-            <div class="upload-hint">PNG, JPG, WEBP • Glissez-déposez ou cliquez</div>
-            <input type="file" id="fileInput" accept="image/*">
-        </div>
-    </div>
-
-    <div class="editor" id="editor">
-        <div class="sidebar">
-            <div class="tool-section">
-                <div class="tool-title">Outils</div>
-                <button class="tool-btn active" onclick="selectTool('crop')">✂️ Recadrer</button>
-                <button class="tool-btn" onclick="selectTool('adjust')">🎨 Ajuster</button>
-                <button class="tool-btn" onclick="selectTool('filters')">✨ Filtres</button>
-                <button class="tool-btn" onclick="selectTool('effects')">💫 Effets</button>
-            </div>
-            <div class="tool-section">
-                <div class="tool-title">Actions</div>
-                <button class="tool-btn" onclick="resetAll()">🔄 Réinitialiser</button>
-                <button class="tool-btn" onclick="newImage()">📁 Nouvelle</button>
-                <button class="tool-btn" onclick="downloadImage()">💾 Télécharger</button>
-            </div>
-        </div>
-
-        <div class="canvas-area">
-            <div class="canvas-container" id="canvasContainer">
-                <canvas id="canvas"></canvas>
-                <div class="crop-overlay" id="cropOverlay" style="display: none;">
-                    <div class="crop-area" id="cropArea">
-                        <div class="resize-handle handle-tl"></div>
-                        <div class="resize-handle handle-tr"></div>
-                        <div class="resize-handle handle-bl"></div>
-                        <div class="resize-handle handle-br"></div>
-                        <div class="resize-handle handle-t"></div>
-                        <div class="resize-handle handle-b"></div>
-                        <div class="resize-handle handle-l"></div>
-                        <div class="resize-handle handle-r"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="controls-panel" id="controlsPanel">
-            <div id="cropControls">
-                <div class="control-group">
-                    <label class="control-label">PROPORTIONS</label>
-                    <div class="aspect-btns">
-                        <button class="aspect-btn active" onclick="setAspect('free')">Libre</button>
-                        <button class="aspect-btn" onclick="setAspect('1:1')">1:1</button>
-                        <button class="aspect-btn" onclick="setAspect('4:3')">4:3</button>
-                        <button class="aspect-btn" onclick="setAspect('16:9')">16:9</button>
-                        <button class="aspect-btn" onclick="setAspect('9:16')">9:16</button>
-                        <button class="aspect-btn" onclick="setAspect('3:4')">3:4</button>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">COINS RONDS</label>
-                    <div class="slider-container">
-                        <input type="range" id="cornerRadius" min="0" max="200" value="0">
-                        <span class="value-display" id="cornerValue">0</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">ADOUCISSEMENT</label>
-                    <div class="slider-container">
-                        <input type="range" id="feather" min="0" max="100" value="0">
-                        <span class="value-display" id="featherValue">0</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">OPACITÉ</label>
-                    <div class="slider-container">
-                        <input type="range" id="maskOpacity" min="0" max="100" value="70">
-                        <span class="value-display" id="maskValue">70%</span>
-                    </div>
-                </div>
-                <div class="action-btns">
-                    <button class="btn btn-primary" onclick="applyCrop()">✓ Appliquer</button>
-                </div>
-            </div>
-
-            <div id="adjustControls" style="display: none;">
-                <div class="control-group">
-                    <label class="control-label">LUMINOSITÉ</label>
-                    <div class="slider-container">
-                        <input type="range" id="brightness" min="-100" max="100" value="0">
-                        <span class="value-display" id="brightnessValue">0</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">CONTRASTE</label>
-                    <div class="slider-container">
-                        <input type="range" id="contrast" min="-100" max="100" value="0">
-                        <span class="value-display" id="contrastValue">0</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">SATURATION</label>
-                    <div class="slider-container">
-                        <input type="range" id="saturation" min="-100" max="100" value="0">
-                        <span class="value-display" id="saturationValue">0</span>
-                    </div>
-                </div>
-                <div class="action-btns">
-                    <button class="btn btn-secondary" onclick="resetAdjustments()">Réinitialiser</button>
-                    <button class="btn btn-primary" onclick="applyAdjustments()">Appliquer</button>
-                </div>
-            </div>
-
-            <div id="filtersControls" style="display: none;">
-                <div class="control-group">
-                    <label class="control-label">FILTRES</label>
-                    <div class="filter-grid">
-                        <button class="filter-btn active" data-filter="none">Original</button>
-                        <button class="filter-btn" data-filter="grayscale">N&B</button>
-                        <button class="filter-btn" data-filter="sepia">Sépia</button>
-                        <button class="filter-btn" data-filter="vintage">Vintage</button>
-                        <button class="filter-btn" data-filter="warm">Chaud</button>
-                        <button class="filter-btn" data-filter="cool">Froid</button>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">INTENSITÉ</label>
-                    <div class="slider-container">
-                        <input type="range" id="filterIntensity" min="0" max="100" value="100">
-                        <span class="value-display" id="filterIntensityValue">100%</span>
-                    </div>
-                </div>
-            </div>
-
-            <div id="effectsControls" style="display: none;">
-                <div class="control-group">
-                    <label class="control-label">FLOU</label>
-                    <div class="slider-container">
-                        <input type="range" id="blur" min="0" max="20" value="0">
-                        <span class="value-display" id="blurValue">0</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">VIGNETTE</label>
-                    <div class="slider-container">
-                        <input type="range" id="vignette" min="0" max="100" value="0">
-                        <span class="value-display" id="vignetteValue">0</span>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <label class="control-label">GRAIN</label>
-                    <div class="slider-container">
-                        <input type="range" id="noise" min="0" max="50" value="0">
-                        <span class="value-display" id="noiseValue">0</span>
-                    </div>
-                </div>
-                <div class="action-btns">
-                    <button class="btn btn-secondary" onclick="resetEffects()">Réinitialiser</button>
-                    <button class="btn btn-primary" onclick="applyEffects()">Appliquer</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const fileInput = document.getElementById('fileInput');
-        const uploadArea = document.getElementById('uploadArea');
-        const uploadScreen = document.getElementById('uploadScreen');
-        const editor = document.getElementById('editor');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        const cropOverlay = document.getElementById('cropOverlay');
-        const cropArea = document.getElementById('cropArea');
-
-        let img = new Image();
-        let originalImageData = null;
-        let currentImageData = null;
-        let currentTool = 'crop';
-        let aspectRatio = null;
-        let isDragging = false;
-        let isResizing = false;
-        let currentHandle = null;
-        let startX, startY, startCropX, startCropY, startCropW, startCropH;
-        let currentFilter = 'none';
-
-        uploadArea.addEventListener('click', () => fileInput.click());
-        uploadArea.addEventListener('dragover', (e) => e.preventDefault());
-        uploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) loadImage(file);
-        });
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) loadImage(e.target.files[0]);
-        });
-
-        function loadImage(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                img.onload = () => {
-                    setupCanvas();
-                    uploadScreen.style.display = 'none';
-                    editor.classList.add('active');
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function setupCanvas() {
-            const maxWidth = 1200;
-            const maxHeight = 800;
-            let width = img.width;
-            let height = img.height;
-
-            if (width > maxWidth) {
-                height = (height * maxWidth) / width;
-                width = maxWidth;
-            }
-            if (height > maxHeight) {
-                width = (width * maxHeight) / height;
-                height = maxHeight;
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(img, 0, 0, width, height);
-            originalImageData = ctx.getImageData(0, 0, width, height);
-            currentImageData = ctx.getImageData(0, 0, width, height);
-            
-            cropArea.style.left = '0px';
-            cropArea.style.top = '0px';
-            cropArea.style.width = canvas.width + 'px';
-            cropArea.style.height = canvas.height + 'px';
-        }
-
-        function selectTool(tool) {
-            currentTool = tool;
-            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-
-            document.getElementById('cropControls').style.display = tool === 'crop' ? 'block' : 'none';
-            document.getElementById('adjustControls').style.display = tool === 'adjust' ? 'block' : 'none';
-            document.getElementById('filtersControls').style.display = tool === 'filters' ? 'block' : 'none';
-            document.getElementById('effectsControls').style.display = tool === 'effects' ? 'block' : 'none';
-
-            cropOverlay.style.display = tool === 'crop' ? 'block' : 'none';
-        }
-
-        function setAspect(ratio) {
-            document.querySelectorAll('.aspect-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-
-            aspectRatio = ratio === 'free' ? null : eval(ratio.replace(':', '/'));
-            if (aspectRatio) {
-                const w = parseFloat(cropArea.style.width);
-                const h = parseFloat(cropArea.style.height);
-                const cx = parseFloat(cropArea.style.left) + w / 2;
-                const cy = parseFloat(cropArea.style.top) + h / 2;
-
-                let newW, newH;
-                if (w / h > aspectRatio) {
-                    newH = h;
-                    newW = newH * aspectRatio;
-                } else {
-                    newW = w;
-                    newH = newW / aspectRatio;
-                }
-
-                cropArea.style.width = newW + 'px';
-                cropArea.style.height = newH + 'px';
-                cropArea.style.left = (cx - newW / 2) + 'px';
-                cropArea.style.top = (cy - newH / 2) + 'px';
-            }
-        }
-
-        ['cornerRadius', 'feather', 'maskOpacity', 'brightness', 'contrast', 'saturation', 'blur', 'vignette', 'noise', 'filterIntensity'].forEach(id => {
-            const slider = document.getElementById(id);
-            if (!slider) return;
-            
-            slider.addEventListener('input', (e) => {
-                const value = e.target.value;
-                const display = document.getElementById(id + 'Value');
-                
-                if (id === 'cornerRadius') {
-                    display.textContent = value;
-                    cropArea.style.borderRadius = value + 'px';
-                } else if (id === 'maskOpacity') {
-                    display.textContent = value + '%';
-                    cropArea.style.boxShadow = `0 0 0 9999px rgba(0,0,0,${value/100})`;
-                } else if (id === 'filterIntensity') {
-                    display.textContent = value + '%';
-                    applyFilter(currentFilter);
-                } else {
-                    display.textContent = value;
-                    if (currentTool === 'adjust') applyAdjustments();
-                    if (currentTool === 'effects') applyEffects();
-                }
-            });
-        });
-
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentFilter = btn.dataset.filter;
-                applyFilter(currentFilter);
-            });
-        });
-
-        cropArea.addEventListener('mousedown', handleCropStart);
-        cropArea.addEventListener('touchstart', handleCropStart, { passive: false });
-
-        function handleCropStart(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            
-            if (e.target.classList.contains('resize-handle')) {
-                isResizing = true;
-                currentHandle = e.target;
-            } else {
-                isDragging = true;
-            }
-            
-            startX = clientX;
-            startY = clientY;
-            startCropX = parseFloat(cropArea.style.left);
-            startCropY = parseFloat(cropArea.style.top);
-            startCropW = parseFloat(cropArea.style.width);
-            startCropH = parseFloat(cropArea.style.height);
-        }
-
-        document.addEventListener('mousemove', handleMove);
-        document.addEventListener('touchmove', handleMove, { passive: false });
-
-        function handleMove(e) {
-            if (!isDragging && !isResizing) return;
-            e.preventDefault();
-            
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            
-            if (isDragging) {
-                const dx = clientX - startX;
-                const dy = clientY - startY;
-                
-                let newLeft = Math.max(0, Math.min(startCropX + dx, canvas.width - startCropW));
-                let newTop = Math.max(0, Math.min(startCropY + dy, canvas.height - startCropH));
-                
-                cropArea.style.left = newLeft + 'px';
-                cropArea.style.top = newTop + 'px';
-            } else if (isResizing) {
-                handleResize(clientX, clientY);
-            }
-        }
-
-        document.addEventListener('mouseup', () => { isDragging = false; isResizing = false; });
-        document.addEventListener('touchend', () => { isDragging = false; isResizing = false; });
-
-        function handleResize(clientX, clientY) {
-            const dx = clientX - startX;
-            const dy = clientY - startY;
-            
-            let newX = startCropX, newY = startCropY, newW = startCropW, newH = startCropH;
-            const hc = currentHandle.classList;
-            
-            if (hc.contains('handle-r') || hc.contains('handle-br') || hc.contains('handle-tr')) {
-                newW = Math.min(startCropW + dx, canvas.width - startCropX);
-            }
-            if (hc.contains('handle-l') || hc.contains('handle-bl') || hc.contains('handle-tl')) {
-                const clampedDx = Math.max(-(canvas.width - startCropX - startCropW), Math.min(startCropX, dx));
-                newX = startCropX + clampedDx;
-                newW = startCropW - clampedDx;
-            }
-            if (hc.contains('handle-b') || hc.contains('handle-br') || hc.contains('handle-bl')) {
-                newH = Math.min(startCropH + dy, canvas.height - startCropY);
-            }
-            if (hc.contains('handle-t') || hc.contains('handle-tr') || hc.contains('handle-tl')) {
-                const clampedDy = Math.max(-(canvas.height - startCropY - startCropH), Math.min(startCropY, dy));
-                newY = startCropY + clampedDy;
-                newH = startCropH - clampedDy;
-            }
-            
-            if (aspectRatio) {
-                if (hc.contains('handle-r') || hc.contains('handle-l')) {
-                    newH = newW / aspectRatio;
-                } else if (hc.contains('handle-t') || hc.contains('handle-b')) {
-                    newW = newH * aspectRatio;
-                } else {
-                    newW / newH > aspectRatio ? newW = newH * aspectRatio : newH = newW / aspectRatio;
-                }
-            }
-            
-            cropArea.style.left = newX + 'px';
-            cropArea.style.top = newY + 'px';
-            crop
+</div>
+
+<footer>
+    <button onclick="document.getElementById('fileInput').click()">Importer</button>
+    <button onclick="resetCrop()">Reset</button>
+    <button onclick="applyCrop()">Exporter</button>
+</footer>
+
+<input type="file" id="fileInput" accept="image/*">
+
+<script>
+let imageDisplay = document.getElementById("imageDisplay");
+let cropArea = document.getElementById("cropArea");
+let cropContainer = document.getElementById("cropContainer");
+
+let currentZoom = 1;
+let imgPos = { x: 0, y: 0 };
+let drag = false;
+let dragStart = { x: 0, y: 0 };
+
+document.getElementById("fileInput").addEventListener("change", (e) => {
+    let file = e.target.files[0];
+    if (!file) return;
+
+    let url = URL.createObjectURL(file);
+    imageDisplay.src = url;
+
+    imageDisplay.onload = () => {
+        currentZoom = 1;
+        imgPos = { x: 0, y: 0 };
+        updateImageTransform();
+    };
+});
+
+function updateImageTransform() {
+    imageDisplay.style.transform = `translate(${imgPos.x}px, ${imgPos.y}px) scale(${currentZoom})`;
+}
+
+/* --- Déplacement image --- */
+imageDisplay.addEventListener("mousedown", (e) => {
+    drag = true;
+    dragStart.x = e.clientX - imgPos.x;
+    dragStart.y = e.clientY - imgPos.y;
+    imageDisplay.style.cursor = "grabbing";
+});
+
+document.addEventListener("mouseup", () => {
+    drag = false;
+    imageDisplay.style.cursor = "grab";
+});
+
+document.addEventListener("mousemove", (e) => {
+    if (!drag) return;
+    imgPos.x = e.clientX - dragStart.x;
+    imgPos.y = e.clientY - dragStart.y;
+    updateImageTransform();
+});
+
+/* --- Zoom avec molette --- */
+document.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    currentZoom += e.deltaY * -0.001;
+    currentZoom = Math.min(Math.max(0.2, currentZoom), 5);
+    updateImageTransform();
+}, { passive: false });
+
+/* --- Reset crop + image --- */
+function resetCrop() {
+    currentZoom = 1;
+    imgPos = { x: 0, y: 0 };
+    cropArea.style.left = "50px";
+    cropArea.style.top = "50px";
+    cropArea.style.width = "150px";
+    cropArea.style.height = "150px";
+    updateImageTransform();
+}
+
+/* --- Export réel sans image noire --- */
+function applyCrop() {
+    const img = imageDisplay;
+    const crop = cropArea;
+    const container = cropContainer;
+
+    const imgNatW = img.naturalWidth;
+    const imgNatH = img.naturalHeight;
+
+    const displayW = imgNatW * currentZoom;
+    const displayH = imgNatH * currentZoom;
+
+    const scaleX = imgNatW / displayW;
+    const scaleY = imgNatH / displayH;
+
+    const imgRect = img.getBoundingClientRect();
+    const cropRect = crop.getBoundingClientRect();
+
+    const offsetX = (cropRect.left - imgRect.left) * scaleX;
+    const offsetY = (cropRect.top - imgRect.top) * scaleY;
+    const cropW = cropRect.width * scaleX;
+    const cropH = cropRect.height * scaleY;
+
+    let canvas = document.createElement("canvas");
+    canvas.width = cropW;
+    canvas.height = cropH;
+
+    let ctx = canvas.getContext("2d");
+
+    ctx.drawImage(
+        img,
+        offsetX,
+        offsetY,
+        cropW,
+        cropH,
+        0,
+        0,
+        cropW,
+        cropH
+    );
+
+    let link = document.createElement("a");
+    link.download = "pixlab_crop.png";
+    link.href = canvas.toDataURL();
+    link.click();
+}
+</script>
+
+</body>
+</html>
