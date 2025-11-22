@@ -120,6 +120,8 @@
             max-height: 600px;
             display: block;
             border-radius: 8px;
+            transition: transform 0.2s;
+            transform-origin: center center;
         }
 
         .crop-overlay {
@@ -350,6 +352,11 @@
                 </div>
                 <div class="tool-group">
                     <div class="slider-control">
+                        <label>Zoom</label>
+                        <input type="range" id="zoomSlider" min="100" max="300" value="100">
+                        <span class="value-display" id="zoomValue">100%</span>
+                    </div>
+                    <div class="slider-control">
                         <label>Opacité</label>
                         <input type="range" id="opacitySlider" min="0" max="100" value="70">
                         <span class="value-display" id="opacityValue">70%</span>
@@ -393,7 +400,7 @@
             </div>
 
             <div class="instruction">
-                💡 Ajustez "Coins ronds" pour des bords arrondis • "Adoucir" crée une transition douce et progressive
+                💡 Utilisez le zoom pour recadrer précisément • "Coins ronds" pour des bords arrondis • "Adoucir" pour une transition douce
             </div>
 
             <div class="actions">
@@ -419,6 +426,8 @@
         const cropContainer = document.getElementById('cropContainer');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+        const zoomSlider = document.getElementById('zoomSlider');
+        const zoomValue = document.getElementById('zoomValue');
         const opacitySlider = document.getElementById('opacitySlider');
         const opacityValue = document.getElementById('opacityValue');
         const cornerSlider = document.getElementById('cornerSlider');
@@ -432,6 +441,16 @@
         let currentHandle = null;
         let startX, startY, startCropX, startCropY, startCropW, startCropH;
         let aspectRatio = null;
+        let currentZoom = 1;
+
+        zoomSlider.addEventListener('input', (e) => {
+            const value = e.target.value;
+            zoomValue.textContent = value + '%';
+            currentZoom = value / 100;
+            imageDisplay.style.transform = `scale(${currentZoom})`;
+            cropContainer.style.width = (imageDisplay.naturalWidth * currentZoom) + 'px';
+            cropContainer.style.height = (imageDisplay.naturalHeight * currentZoom) + 'px';
+        });
 
         opacitySlider.addEventListener('input', (e) => {
             const value = e.target.value;
@@ -541,7 +560,23 @@
         }
 
         // Déplacement de la zone de recadrage
-        cropArea.addEventListener('mousedown', (e) => {
+        cropArea.addEventListener('mousedown', handleCropStart);
+        cropArea.addEventListener('touchstart', handleCropStart, { passive: false });
+
+        function handleCropStart(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            let clientX, clientY;
+            if (e.type === 'touchstart') {
+                const touch = e.touches[0];
+                clientX = touch.clientX;
+                clientY = touch.clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            
             if (e.target.classList.contains('resize-handle')) {
                 isResizing = true;
                 currentHandle = e.target;
@@ -549,23 +584,37 @@
                 isDragging = true;
             }
             
-            startX = e.clientX;
-            startY = e.clientY;
+            startX = clientX;
+            startY = clientY;
             startCropX = parseFloat(cropArea.style.left);
             startCropY = parseFloat(cropArea.style.top);
             startCropW = parseFloat(cropArea.style.width);
             startCropH = parseFloat(cropArea.style.height);
-            
-            e.stopPropagation();
-        });
+        }
 
-        document.addEventListener('mousemove', (e) => {
+        document.addEventListener('mousemove', handleMove);
+        document.addEventListener('touchmove', handleMove, { passive: false });
+
+        function handleMove(e) {
+            if (!isDragging && !isResizing) return;
+            
+            e.preventDefault();
+            
+            let clientX, clientY;
+            if (e.type === 'touchmove') {
+                const touch = e.touches[0];
+                clientX = touch.clientX;
+                clientY = touch.clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            
             if (isDragging) {
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
+                const dx = clientX - startX;
+                const dy = clientY - startY;
                 
                 const imgRect = imageDisplay.getBoundingClientRect();
-                const containerRect = cropContainer.getBoundingClientRect();
                 
                 let newLeft = startCropX + dx;
                 let newTop = startCropY + dy;
@@ -576,19 +625,27 @@
                 cropArea.style.left = newLeft + 'px';
                 cropArea.style.top = newTop + 'px';
             } else if (isResizing) {
-                handleResize(e);
+                handleResize(e, clientX, clientY);
             }
-        });
+        }
 
-        document.addEventListener('mouseup', () => {
+        document.addEventListener('mouseup', handleEnd);
+        document.addEventListener('touchend', handleEnd);
+
+        function handleEnd() {
             isDragging = false;
             isResizing = false;
             currentHandle = null;
-        });
+        }
 
-        function handleResize(e) {
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
+        function handleResize(e, clientX, clientY) {
+            if (!clientX) {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            
+            const dx = clientX - startX;
+            const dy = clientY - startY;
             const imgRect = imageDisplay.getBoundingClientRect();
             
             let newX = startCropX;
