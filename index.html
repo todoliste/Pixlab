@@ -712,119 +712,127 @@
             const imgRect = imageDisplay.getBoundingClientRect();
             const cropRect = cropArea.getBoundingClientRect();
             
-            const scaleX = img.naturalWidth / imgRect.width;
-            const scaleY = img.naturalHeight / imgRect.height;
+            const scaleX = img.naturalWidth / (imgRect.width / currentZoom);
+            const scaleY = img.naturalHeight / (imgRect.height / currentZoom);
             
-            const cropX = (cropRect.left - imgRect.left) * scaleX;
-            const cropY = (cropRect.top - imgRect.top) * scaleY;
-            const cropW = cropRect.width * scaleX;
-            const cropH = cropRect.height * scaleY;
+            const cropX = (cropRect.left - imgRect.left) / currentZoom * scaleX;
+            const cropY = (cropRect.top - imgRect.top) / currentZoom * scaleY;
+            const cropW = (cropRect.width / currentZoom) * scaleX;
+            const cropH = (cropRect.height / currentZoom) * scaleY;
             
             const feather = parseInt(featherSlider.value) * scaleX;
             const cornerRadius = parseInt(cornerSlider.value) * scaleX;
             
-            // Ajouter du padding pour le feather
-            const padding = feather * 2;
-            canvas.width = cropW + padding * 2;
-            canvas.height = cropH + padding * 2;
+            canvas.width = cropW;
+            canvas.height = cropH;
             
-            // Dessiner l'image avec padding
+            // Dessiner l'image recadrée
             ctx.drawImage(img, 
-                Math.max(0, cropX - padding), 
-                Math.max(0, cropY - padding), 
-                cropW + padding * 2, 
-                cropH + padding * 2, 
+                cropX, 
+                cropY, 
+                cropW, 
+                cropH, 
                 0, 0, 
-                canvas.width, 
-                canvas.height
+                cropW, 
+                cropH
             );
             
-            // Créer le masque avec coins ronds et feather
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            
-            for (let y = 0; y < canvas.height; y++) {
-                for (let x = 0; x < canvas.width; x++) {
-                    const idx = (y * canvas.width + x) * 4;
-                    
-                    // Position relative au rectangle de crop (sans padding)
-                    const relX = x - padding;
-                    const relY = y - padding;
-                    
-                    let alpha = 1;
-                    
-                    // Calculer la distance depuis les bords pour les coins ronds
-                    if (cornerRadius > 0) {
-                        // Déterminer si on est dans une zone de coin
-                        let cornerDist = Infinity;
+            // Appliquer le masque avec coins ronds et feather
+            if (cornerRadius > 0 || feather > 0) {
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                
+                for (let y = 0; y < canvas.height; y++) {
+                    for (let x = 0; x < canvas.width; x++) {
+                        const idx = (y * canvas.width + x) * 4;
+                        let alpha = 1;
                         
-                        // Coin top-left
-                        if (relX < cornerRadius && relY < cornerRadius) {
-                            const dx = cornerRadius - relX;
-                            const dy = cornerRadius - relY;
-                            cornerDist = Math.sqrt(dx * dx + dy * dy) - cornerRadius;
-                        }
-                        // Coin top-right
-                        else if (relX > cropW - cornerRadius && relY < cornerRadius) {
-                            const dx = relX - (cropW - cornerRadius);
-                            const dy = cornerRadius - relY;
-                            cornerDist = Math.sqrt(dx * dx + dy * dy) - cornerRadius;
-                        }
-                        // Coin bottom-left
-                        else if (relX < cornerRadius && relY > cropH - cornerRadius) {
-                            const dx = cornerRadius - relX;
-                            const dy = relY - (cropH - cornerRadius);
-                            cornerDist = Math.sqrt(dx * dx + dy * dy) - cornerRadius;
-                        }
-                        // Coin bottom-right
-                        else if (relX > cropW - cornerRadius && relY > cropH - cornerRadius) {
-                            const dx = relX - (cropW - cornerRadius);
-                            const dy = relY - (cropH - cornerRadius);
-                            cornerDist = Math.sqrt(dx * dx + dy * dy) - cornerRadius;
-                        }
+                        // Distance depuis chaque bord
+                        const distLeft = x;
+                        const distRight = canvas.width - x - 1;
+                        const distTop = y;
+                        const distBottom = canvas.height - y - 1;
                         
-                        // Si on est dans une zone de coin et à l'extérieur du rayon
-                        if (cornerDist > 0) {
-                            if (feather > 0 && cornerDist < feather) {
-                                alpha = Math.max(0, 1 - (cornerDist / feather));
-                            } else if (cornerDist >= feather) {
-                                alpha = 0;
-                            }
-                        }
-                    }
-                    
-                    // Appliquer le feather sur les bords droits (non-coins)
-                    if (alpha > 0 && feather > 0) {
-                        const distLeft = relX;
-                        const distRight = cropW - relX;
-                        const distTop = relY;
-                        const distBottom = cropH - relY;
-                        
-                        // Ignorer les zones de coins si cornerRadius > 0
-                        let inCornerZone = false;
+                        // Appliquer les coins ronds
                         if (cornerRadius > 0) {
-                            if ((relX < cornerRadius && relY < cornerRadius) ||
-                                (relX > cropW - cornerRadius && relY < cornerRadius) ||
-                                (relX < cornerRadius && relY > cropH - cornerRadius) ||
-                                (relX > cropW - cornerRadius && relY > cropH - cornerRadius)) {
-                                inCornerZone = true;
+                            // Coin top-left
+                            if (x < cornerRadius && y < cornerRadius) {
+                                const dx = cornerRadius - x;
+                                const dy = cornerRadius - y;
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+                                if (dist > cornerRadius) {
+                                    const overflow = dist - cornerRadius;
+                                    if (feather > 0 && overflow < feather) {
+                                        alpha = 1 - (overflow / feather);
+                                    } else {
+                                        alpha = 0;
+                                    }
+                                }
+                            }
+                            // Coin top-right
+                            else if (x >= canvas.width - cornerRadius && y < cornerRadius) {
+                                const dx = x - (canvas.width - cornerRadius);
+                                const dy = cornerRadius - y;
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+                                if (dist > cornerRadius) {
+                                    const overflow = dist - cornerRadius;
+                                    if (feather > 0 && overflow < feather) {
+                                        alpha = 1 - (overflow / feather);
+                                    } else {
+                                        alpha = 0;
+                                    }
+                                }
+                            }
+                            // Coin bottom-left
+                            else if (x < cornerRadius && y >= canvas.height - cornerRadius) {
+                                const dx = cornerRadius - x;
+                                const dy = y - (canvas.height - cornerRadius);
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+                                if (dist > cornerRadius) {
+                                    const overflow = dist - cornerRadius;
+                                    if (feather > 0 && overflow < feather) {
+                                        alpha = 1 - (overflow / feather);
+                                    } else {
+                                        alpha = 0;
+                                    }
+                                }
+                            }
+                            // Coin bottom-right
+                            else if (x >= canvas.width - cornerRadius && y >= canvas.height - cornerRadius) {
+                                const dx = x - (canvas.width - cornerRadius);
+                                const dy = y - (canvas.height - cornerRadius);
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+                                if (dist > cornerRadius) {
+                                    const overflow = dist - cornerRadius;
+                                    if (feather > 0 && overflow < feather) {
+                                        alpha = 1 - (overflow / feather);
+                                    } else {
+                                        alpha = 0;
+                                    }
+                                }
+                            }
+                            // Bords droits (pas dans les coins)
+                            else if (feather > 0) {
+                                const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+                                if (minDist < feather) {
+                                    alpha = minDist / feather;
+                                }
                             }
                         }
-                        
-                        if (!inCornerZone) {
+                        // Seulement feather, pas de coins ronds
+                        else if (feather > 0) {
                             const minDist = Math.min(distLeft, distRight, distTop, distBottom);
                             if (minDist < feather) {
-                                alpha = Math.min(alpha, Math.max(0, minDist / feather));
+                                alpha = minDist / feather;
                             }
                         }
+                        
+                        data[idx + 3] *= alpha;
                     }
-                    
-                    // Appliquer l'alpha
-                    data[idx + 3] *= alpha;
                 }
+                
+                ctx.putImageData(imageData, 0, 0);
             }
-            
-            ctx.putImageData(imageData, 0, 0);
             
             const link = document.createElement('a');
             link.download = 'image-recadree.png';
