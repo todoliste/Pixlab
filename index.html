@@ -134,9 +134,10 @@
         .crop-area {
             position: absolute;
             border: 2px solid #fff;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7);
             cursor: move;
             pointer-events: all;
+            transition: box-shadow 0.2s;
         }
 
         .resize-handle {
@@ -347,6 +348,13 @@
                         <button class="aspect-btn" onclick="setAspectRatio('9:16')">9:16</button>
                     </div>
                 </div>
+                <div class="tool-group">
+                    <div class="slider-control">
+                        <label>Opacité</label>
+                        <input type="range" id="opacitySlider" min="0" max="100" value="70">
+                        <span class="value-display" id="opacityValue">70%</span>
+                    </div>
+                </div>
             </div>
 
             <div class="canvas-wrapper">
@@ -401,6 +409,8 @@
         const cropContainer = document.getElementById('cropContainer');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
+        const opacitySlider = document.getElementById('opacitySlider');
+        const opacityValue = document.getElementById('opacityValue');
 
         let img = new Image();
         let isDragging = false;
@@ -408,6 +418,13 @@
         let currentHandle = null;
         let startX, startY, startCropX, startCropY, startCropW, startCropH;
         let aspectRatio = null;
+
+        opacitySlider.addEventListener('input', (e) => {
+            const value = e.target.value;
+            opacityValue.textContent = value + '%';
+            const opacity = value / 100;
+            cropArea.style.boxShadow = `0 0 0 9999px rgba(0, 0, 0, ${opacity})`;
+        });
 
         uploadArea.addEventListener('click', () => fileInput.click());
 
@@ -461,33 +478,41 @@
 
         function setAspectRatio(ratio) {
             document.querySelectorAll('.aspect-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            
+            // Trouver le bon bouton à activer
+            const buttons = document.querySelectorAll('.aspect-btn');
+            buttons.forEach(btn => {
+                if (btn.textContent === ratio || (ratio === 'free' && btn.textContent === 'Libre')) {
+                    btn.classList.add('active');
+                }
+            });
             
             if (ratio === 'free') {
                 aspectRatio = null;
-            } else {
-                const [w, h] = ratio.split(':').map(Number);
-                aspectRatio = w / h;
-                
-                const currentW = parseFloat(cropArea.style.width);
-                const currentH = parseFloat(cropArea.style.height);
-                const centerX = parseFloat(cropArea.style.left) + currentW / 2;
-                const centerY = parseFloat(cropArea.style.top) + currentH / 2;
-                
-                let newW, newH;
-                if (currentW / currentH > aspectRatio) {
-                    newH = currentH;
-                    newW = newH * aspectRatio;
-                } else {
-                    newW = currentW;
-                    newH = newW / aspectRatio;
-                }
-                
-                cropArea.style.width = newW + 'px';
-                cropArea.style.height = newH + 'px';
-                cropArea.style.left = (centerX - newW / 2) + 'px';
-                cropArea.style.top = (centerY - newH / 2) + 'px';
+                return;
             }
+            
+            const [w, h] = ratio.split(':').map(Number);
+            aspectRatio = w / h;
+            
+            const currentW = parseFloat(cropArea.style.width);
+            const currentH = parseFloat(cropArea.style.height);
+            const centerX = parseFloat(cropArea.style.left) + currentW / 2;
+            const centerY = parseFloat(cropArea.style.top) + currentH / 2;
+            
+            let newW, newH;
+            if (currentW / currentH > aspectRatio) {
+                newH = currentH;
+                newW = newH * aspectRatio;
+            } else {
+                newW = currentW;
+                newH = newW / aspectRatio;
+            }
+            
+            cropArea.style.width = newW + 'px';
+            cropArea.style.height = newH + 'px';
+            cropArea.style.left = (centerX - newW / 2) + 'px';
+            cropArea.style.top = (centerY - newH / 2) + 'px';
         }
 
         // Déplacement de la zone de recadrage
