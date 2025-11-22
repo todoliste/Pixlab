@@ -1,226 +1,620 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<title>PixLab – Photo Editor</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PixLab — Éditeur Photo</title>
 <style>
-    body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: #0a0a0a;
-        color: white;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-    }
-
-    header {
-        padding: 15px 25px;
-        background: #000;
-        font-size: 26px;
-        font-weight: bold;
-        border-bottom: 1px solid #222;
-        letter-spacing: 1px;
-    }
-
-    #editor {
-        flex: 1;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        position: relative;
-        overflow: hidden;
-        background: #111;
-    }
-
-    #cropContainer {
-        position: relative;
-        max-width: 80%;
-        max-height: 80%;
-        overflow: hidden;
-        border: 1px dashed #555;
-    }
-
-    #imageDisplay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        transform-origin: center center;
-        cursor: grab;
-        user-select: none;
-    }
-
-    #cropArea {
-        border: 2px solid #00d4ff;
-        position: absolute;
-        resize: both;
-        overflow: hidden;
-        pointer-events: auto;
-    }
-
-    footer {
-        padding: 15px;
-        background: #000;
-        border-top: 1px solid #222;
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-    }
-
-    button {
-        padding: 12px 18px;
-        background: #00d4ff;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 15px;
-        color: #000;
-        font-weight: bold;
-        transition: 0.2s;
-    }
-
-    button:hover {
-        opacity: 0.8;
-    }
-
-    #fileInput {
-        display: none;
-    }
+  :root{
+    --bg:#0a0a0a; --panel:#111; --muted:#666; --accent:#00d4ff; --white:#fff;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--white);font-family:Inter,Segoe UI,Roboto,Arial;}
+  .app{display:flex;flex-direction:column;height:100%;}
+  header{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid #0f0f0f;background:#000}
+  header h1{font-size:18px;margin:0;font-weight:700}
+  .main{flex:1;display:flex;gap:18px;padding:18px;box-sizing:border-box}
+  .left{flex:1;display:flex;flex-direction:column;gap:12px}
+  .canvas-area{flex:1;background:var(--panel);border-radius:12px;padding:16px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+  .controls{width:360px;max-width:36%;min-width:280px;background:#0e0e0e;border-radius:12px;padding:16px;border:1px solid #151515;box-shadow:0 6px 30px rgba(0,0,0,0.6);overflow:auto}
+  .section{margin-bottom:14px}
+  .label{color:var(--muted);font-size:13px;margin-bottom:8px}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  button{background:var(--accent);border:none;padding:10px 12px;border-radius:8px;color:#001;font-weight:700;cursor:pointer}
+  .muted-btn{background:#222;color:var(--white);border:1px solid #2a2a2a}
+  input[type=range]{width:100%}
+  .small{font-size:13px;padding:8px 10px}
+  /* canvas & layers */
+  #workspace{position:relative;width:100%;height:600px;max-height:78vh;display:flex;align-items:center;justify-content:center}
+  #cropContainer{position:relative;overflow:hidden;border-radius:10px}
+  #imageDisplay{position:absolute;top:0;left:0;transform-origin:0 0;user-select:none;touch-action:none}
+  #cropArea{position:absolute;border:2px dashed rgba(255,255,255,0.12);box-shadow:0 0 0 9999px rgba(0,0,0,0.45);pointer-events:auto;border-radius:8px}
+  .handle{position:absolute;width:12px;height:12px;background:#fff;border-radius:50%;border:2px solid #0a0a0a;box-sizing:border-box}
+  .h-tl{top:-8px;left:-8px;cursor:nwse-resize}.h-tr{top:-8px;right:-8px;cursor:nesw-resize}
+  .h-bl{bottom:-8px;left:-8px;cursor:nesw-resize}.h-br{bottom:-8px;right:-8px;cursor:nwse-resize}
+  /* stickers & text layers preview */
+  .layer{text-shadow:0 2px 8px rgba(0,0,0,0.6)}
+  footer{padding:12px 20px;background:#050505;border-top:1px solid #0f0f0f;display:flex;gap:12px;align-items:center;justify-content:flex-end}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:800}
+  .pill{background:#0d0d0d;border:1px solid #222;padding:8px;border-radius:8px;color:var(--muted);font-size:13px}
+  /* responsive */
+  @media (max-width:900px){.main{flex-direction:column}.controls{width:100%;max-width:none;min-width:0}}
 </style>
 </head>
 <body>
+<div class="app">
+  <header>
+    <div class="logo">📸 PixLab</div>
+    <div class="pill">Dark — Pro</div>
+  </header>
 
-<header>📸 PixLab</header>
+  <div class="main">
+    <div class="left">
+      <div class="canvas-area">
+        <div id="workspace">
+          <!-- cropContainer contient l'image et les calques (texte/stickers) -->
+          <div id="cropContainer" style="width:820px;height:460px;">
+            <img id="imageDisplay" draggable="false" alt="">
+            <!-- couche pour stickers / textes (divs positionnées) -->
+            <div id="layers" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></div>
+            <!-- zone de recadrage -->
+            <div id="cropArea" style="left:40px;top:40px;width:400px;height:300px;">
+              <div class="handle h-tl"></div>
+              <div class="handle h-tr"></div>
+              <div class="handle h-bl"></div>
+              <div class="handle h-br"></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-<div id="editor">
-    <div id="cropContainer">
-        <img id="imageDisplay">
-        <div id="cropArea" style="width:150px; height:150px; top:50px; left:50px;"></div>
+      <div style="display:flex;gap:12px;align-items:center;padding-top:8px">
+        <input id="fileInput" type="file" accept="image/*" style="display:none"/>
+        <button id="btnImport" class="small">Importer</button>
+        <button id="btnReset" class="small muted-btn">Reset</button>
+        <button id="btnExport" class="small">Exporter</button>
+        <select id="exportFormat" class="small" style="background:#111;color:#fff;border:1px solid #222;border-radius:8px;padding:8px">
+          <option value="png">PNG (transparent)</option>
+          <option value="jpeg">JPEG (no alpha)</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px">
+          <input type="checkbox" id="roundMask"> Masque rond
+        </label>
+      </div>
     </div>
+
+    <aside class="controls">
+      <div class="section">
+        <div class="label">Transform</div>
+        <div class="row">
+          <button id="rotLeft" class="small muted-btn">⤺ 90°</button>
+          <button id="rotRight" class="small muted-btn">90° ⤻</button>
+          <button id="flipH" class="small muted-btn">↔ Flip H</button>
+          <button id="flipV" class="small muted-btn">↕ Flip V</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Zoom (molette) • Déplacer = glisser</div>
+        <div class="row">
+          <div class="pill">Zoom: <span id="zoomLabel">100%</span></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Filtres</div>
+        <div class="row">
+          <div style="width:100%"><label class="label">Brightness <span id="vBright">100%</span></label><input id="brightness" type="range" min="0" max="200" value="100"></div>
+          <div style="width:100%"><label class="label">Contrast <span id="vContrast">100%</span></label><input id="contrast" type="range" min="0" max="200" value="100"></div>
+          <div style="width:100%"><label class="label">Saturation <span id="vSat">100%</span></label><input id="saturation" type="range" min="0" max="200" value="100"></div>
+          <div style="width:100%"><label class="label">Blur <span id="vBlur">0px</span></label><input id="blur" type="range" min="0" max="10" value="0"></div>
+          <div style="width:100%"><label class="label">Grayscale</label><input id="grayscale" type="range" min="0" max="100" value="0"></div>
+          <div style="width:100%"><label class="label">Sepia</label><input id="sepia" type="range" min="0" max="100" value="0"></div>
+        </div>
+        <div style="margin-top:8px" class="row">
+          <button id="resetFilters" class="small muted-btn">Reset filtres</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Texte</div>
+        <input id="txtInput" placeholder="Tape ton texte..." style="width:100%;padding:8px;border-radius:8px;border:1px solid #222;background:#0b0b0b;color:#fff;margin-bottom:6px"/>
+        <div class="row">
+          <input id="txtSize" type="number" value="36" style="width:100px;padding:8px;border-radius:8px;border:1px solid #222;background:#0b0b0b;color:#fff"/>
+          <input id="txtColor" type="color" value="#ffffff" style="width:60px;height:40px;padding:6px;border-radius:8px;border:1px solid #222;background:#0b0b0b"/>
+          <button id="addText" class="small">Ajouter</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Stickers rapides</div>
+        <div class="row" id="stickersRow">
+          <!-- quelques stickers emoji (simple et rapide) -->
+          <button class="small muted-btn stickerBtn">🔥</button>
+          <button class="small muted-btn stickerBtn">⭐</button>
+          <button class="small muted-btn stickerBtn">💥</button>
+          <button class="small muted-btn stickerBtn">🎯</button>
+          <button class="small muted-btn stickerBtn">🌈</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="label">Aide / Tips</div>
+        <div style="color:var(--muted);font-size:13px;line-height:1.4">
+          - Utilise la molette pour zoom. <br>
+          - Glisse l’image pour la repositionner. <br>
+          - Redimensionne la zone de recadrage par les poignées. <br>
+          - L’export gère rotation/flip, filtres et masque rond.
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <div style="color:var(--muted);font-size:13px;margin-right:auto;padding-left:20px">PixLab • by you</div>
+    <div style="font-size:13px;color:var(--muted)">Preview: <span id="previewSize">—</span></div>
+  </footer>
 </div>
 
-<footer>
-    <button onclick="document.getElementById('fileInput').click()">Importer</button>
-    <button onclick="resetCrop()">Reset</button>
-    <button onclick="applyCrop()">Exporter</button>
-</footer>
-
-<input type="file" id="fileInput" accept="image/*">
-
 <script>
-let imageDisplay = document.getElementById("imageDisplay");
-let cropArea = document.getElementById("cropArea");
-let cropContainer = document.getElementById("cropContainer");
+/* ====== Variables principales ====== */
+const fileInput = document.getElementById('fileInput');
+const btnImport = document.getElementById('btnImport');
+const btnReset = document.getElementById('btnReset');
+const btnExport = document.getElementById('btnExport');
+const exportFormat = document.getElementById('exportFormat');
+const roundMask = document.getElementById('roundMask');
 
+const imageDisplay = document.getElementById('imageDisplay');
+const cropContainer = document.getElementById('cropContainer');
+const cropArea = document.getElementById('cropArea');
+const layers = document.getElementById('layers');
+
+const zoomLabel = document.getElementById('zoomLabel');
+const previewSize = document.getElementById('previewSize');
+
+// transform & state
+let img = new Image();
 let currentZoom = 1;
-let imgPos = { x: 0, y: 0 };
-let drag = false;
-let dragStart = { x: 0, y: 0 };
+let imgPos = {x:0,y:0}; // translate applied to image (in px)
+let isDraggingImage = false, dragStart = {x:0,y:0};
+let isDraggingCrop = false, cropDragStart = {}, cropStartRect = {};
+let currentRotation = 0; // 0,90,180,270
+let flipH = false, flipV = false;
 
-document.getElementById("fileInput").addEventListener("change", (e) => {
-    let file = e.target.files[0];
-    if (!file) return;
+// filters state
+const controls = {
+  brightness: document.getElementById('brightness'),
+  contrast: document.getElementById('contrast'),
+  saturation: document.getElementById('saturation'),
+  blur: document.getElementById('blur'),
+  grayscale: document.getElementById('grayscale'),
+  sepia: document.getElementById('sepia'),
+};
+const labels = {
+  vBright: document.getElementById('vBright'),
+  vContrast: document.getElementById('vContrast'),
+  vSat: document.getElementById('vSat'),
+  vBlur: document.getElementById('vBlur'),
+};
+document.getElementById('resetFilters').addEventListener('click',resetFilters);
 
-    let url = URL.createObjectURL(file);
-    imageDisplay.src = url;
+/* ====== Import / UI ====== */
+btnImport.addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',async e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const url = URL.createObjectURL(f);
+  img = new Image();
+  img.src = url;
+  img.onload = ()=>{
+    // set natural size container proportionally
+    const maxW = 1200, maxH = 800;
+    const ar = img.naturalWidth / img.naturalHeight;
+    let w = Math.min(maxW,img.naturalWidth);
+    let h = Math.min(maxH,img.naturalHeight);
+    if(w/h > ar) w = Math.round(h * ar); else h = Math.round(w / ar);
 
-    imageDisplay.onload = () => {
-        currentZoom = 1;
-        imgPos = { x: 0, y: 0 };
-        updateImageTransform();
-    };
+    cropContainer.style.width = w + 'px';
+    cropContainer.style.height = h + 'px';
+    // reset transforms
+    currentZoom=1; imgPos={x:0,y:0}; currentRotation=0; flipH=false; flipV=false;
+    imageDisplay.src = img.src;
+    imageDisplay.style.width = img.naturalWidth + 'px';
+    imageDisplay.style.height = img.naturalHeight + 'px';
+    updateImageTransform();
+    // reset crop area to center
+    const cw = Math.round(w*0.6), ch = Math.round(h*0.6);
+    cropArea.style.left = Math.round((w-cw)/2)+'px';
+    cropArea.style.top = Math.round((h-ch)/2)+'px';
+    cropArea.style.width = cw+'px';
+    cropArea.style.height = ch+'px';
+    layers.innerHTML = '';
+    updatePreviewInfo();
+  };
 });
 
-function updateImageTransform() {
-    imageDisplay.style.transform = `translate(${imgPos.x}px, ${imgPos.y}px) scale(${currentZoom})`;
+/* ====== Image transform & render (CSS transform for interactivity) ====== */
+function updateImageTransform(){
+  // We keep image element at top-left (0,0) and transform it with translate + scale + rotate + flip
+  const rot = currentRotation;
+  const scaleX = (flipH ? -1 : 1) * currentZoom;
+  const scaleY = (flipV ? -1 : 1) * currentZoom;
+  // transform origin at 0 0, so we translate then rotate around that origin
+  // For nicer visual, we preserve translate in px and then rotate
+  imageDisplay.style.transform = `translate(${imgPos.x}px, ${imgPos.y}px) rotate(${rot}deg) scale(${scaleX}, ${scaleY})`;
+  // apply CSS filters (only for preview)
+  const filt = `brightness(${controls.brightness.value}%) contrast(${controls.contrast.value}%) saturate(${controls.saturation.value}%) blur(${controls.blur.value}px) grayscale(${controls.grayscale.value}%) sepia(${controls.sepia.value}%)`;
+  imageDisplay.style.filter = filt;
+  // layers should match transform and be pointer-events none
+  layers.style.transform = imageDisplay.style.transform;
+  layers.style.filter = imageDisplay.style.filter;
+  zoomLabel.textContent = Math.round(currentZoom*100)+'%';
 }
 
-/* --- Déplacement image --- */
-imageDisplay.addEventListener("mousedown", (e) => {
-    drag = true;
-    dragStart.x = e.clientX - imgPos.x;
-    dragStart.y = e.clientY - imgPos.y;
-    imageDisplay.style.cursor = "grabbing";
+/* ====== Drag image with mouse/touch ====== */
+imageDisplay.addEventListener('mousedown', (e)=>{
+  isDraggingImage = true;
+  dragStart.x = e.clientX - imgPos.x;
+  dragStart.y = e.clientY - imgPos.y;
+  imageDisplay.style.cursor = 'grabbing';
+});
+document.addEventListener('mouseup', ()=>{ isDraggingImage=false; imageDisplay.style.cursor='grab';});
+document.addEventListener('mousemove', (e)=>{
+  if(!isDraggingImage) return;
+  imgPos.x = e.clientX - dragStart.x;
+  imgPos.y = e.clientY - dragStart.y;
+  updateImageTransform();
+});
+/* touch */
+imageDisplay.addEventListener('touchstart',(e)=>{
+  const t = e.touches[0];
+  isDraggingImage = true; dragStart.x = t.clientX - imgPos.x; dragStart.y = t.clientY - imgPos.y;
+});
+document.addEventListener('touchend',()=>isDraggingImage=false);
+document.addEventListener('touchmove',(e)=>{
+  if(!isDraggingImage) return;
+  const t = e.touches[0];
+  imgPos.x = t.clientX - dragStart.x;
+  imgPos.y = t.clientY - dragStart.y;
+  updateImageTransform();
 });
 
-document.addEventListener("mouseup", () => {
-    drag = false;
-    imageDisplay.style.cursor = "grab";
+/* ====== Zoom with wheel (center under mouse) ====== */
+cropContainer.addEventListener('wheel',(e)=>{
+  e.preventDefault();
+  if(!img.src) return;
+  const rect = cropContainer.getBoundingClientRect();
+  const mx = e.clientX - rect.left; const my = e.clientY - rect.top;
+  const prevZoom = currentZoom;
+  currentZoom += e.deltaY * -0.0015;
+  currentZoom = Math.min(Math.max(0.1, currentZoom), 6);
+  // keep point under mouse stable: adjust imgPos
+  imgPos.x = mx - (mx - imgPos.x) * (currentZoom / prevZoom);
+  imgPos.y = my - (my - imgPos.y) * (currentZoom / prevZoom);
+  updateImageTransform();
+},{passive:false});
+
+/* ====== Crop area drag & resize (handles) ====== */
+const handles = {
+  tl: cropArea.querySelector('.h-tl'),
+  tr: cropArea.querySelector('.h-tr'),
+  bl: cropArea.querySelector('.h-bl'),
+  br: cropArea.querySelector('.h-br')
+};
+
+function rectFromStyle(el){
+  return {
+    left: parseFloat(el.style.left||0),
+    top: parseFloat(el.style.top||0),
+    width: parseFloat(el.style.width||100),
+    height: parseFloat(el.style.height||100)
+  };
+}
+cropArea.addEventListener('mousedown', (e)=>{
+  // start move crop unless clicked handle
+  if(e.target.classList.contains('handle')) return;
+  isDraggingCrop = true;
+  const rect = rectFromStyle(cropArea);
+  cropDragStart = {mouseX:e.clientX, mouseY:e.clientY};
+  cropStartRect = {...rect};
 });
-
-document.addEventListener("mousemove", (e) => {
-    if (!drag) return;
-    imgPos.x = e.clientX - dragStart.x;
-    imgPos.y = e.clientY - dragStart.y;
-    updateImageTransform();
+document.addEventListener('mouseup', ()=>{ isDraggingCrop=false; isResizingHandle=null; });
+document.addEventListener('mousemove', (e)=>{
+  if(isDraggingCrop){
+    const dx = e.clientX - cropDragStart.mouseX;
+    const dy = e.clientY - cropDragStart.mouseY;
+    const containerW = cropContainer.clientWidth, containerH = cropContainer.clientHeight;
+    let nx = cropStartRect.left + dx, ny = cropStartRect.top + dy;
+    nx = Math.max(0, Math.min(nx, containerW - cropStartRect.width));
+    ny = Math.max(0, Math.min(ny, containerH - cropStartRect.height));
+    cropArea.style.left = nx + 'px';
+    cropArea.style.top = ny + 'px';
+  }
+  if(isResizingHandle){
+    const rect = cropStartRect;
+    const dx = e.clientX - resizeStart.mouseX;
+    const dy = e.clientY - resizeStart.mouseY;
+    let newRect = {...rect};
+    if(isResizingHandle==='tl'){
+      newRect.left = rect.left + dx; newRect.top = rect.top + dy;
+      newRect.width = rect.width - dx; newRect.height = rect.height - dy;
+    } else if(isResizingHandle==='tr'){
+      newRect.top = rect.top + dy; newRect.width = rect.width + dx; newRect.height = rect.height - dy;
+    } else if(isResizingHandle==='bl'){
+      newRect.left = rect.left + dx; newRect.width = rect.width - dx; newRect.height = rect.height + dy;
+    } else if(isResizingHandle==='br'){
+      newRect.width = rect.width + dx; newRect.height = rect.height + dy;
+    }
+    // clamp min size
+    newRect.width = Math.max(40,newRect.width);
+    newRect.height = Math.max(40,newRect.height);
+    // clamp inside container
+    newRect.left = Math.max(0, Math.min(newRect.left, cropContainer.clientWidth - newRect.width));
+    newRect.top  = Math.max(0, Math.min(newRect.top, cropContainer.clientHeight - newRect.height));
+    cropArea.style.left = newRect.left+'px';
+    cropArea.style.top = newRect.top+'px';
+    cropArea.style.width = newRect.width+'px';
+    cropArea.style.height = newRect.height+'px';
+  }
 });
+let isResizingHandle = null, resizeStart = {};
+Object.entries(handles).forEach(([k,el])=>{
+  el.addEventListener('mousedown', (e)=>{
+    e.stopPropagation(); e.preventDefault();
+    isResizingHandle = k;
+    resizeStart.mouseX = e.clientX; resizeStart.mouseY = e.clientY;
+    cropStartRect = rectFromStyle(cropArea);
+  });
+});
+document.addEventListener('mouseup', ()=>{ isResizingHandle=null; });
 
-/* --- Zoom avec molette --- */
-document.addEventListener("wheel", (e) => {
-    e.preventDefault();
-    currentZoom += e.deltaY * -0.001;
-    currentZoom = Math.min(Math.max(0.2, currentZoom), 5);
-    updateImageTransform();
-}, { passive: false });
+/* ====== Rotation & flip ====== */
+document.getElementById('rotLeft').addEventListener('click', ()=>{
+  currentRotation = (currentRotation - 90 + 360) % 360; updateImageTransform();
+});
+document.getElementById('rotRight').addEventListener('click', ()=>{
+  currentRotation = (currentRotation + 90) % 360; updateImageTransform();
+});
+document.getElementById('flipH').addEventListener('click', ()=>{ flipH = !flipH; updateImageTransform(); });
+document.getElementById('flipV').addEventListener('click', ()=>{ flipV = !flipV; updateImageTransform(); });
 
-/* --- Reset crop + image --- */
-function resetCrop() {
-    currentZoom = 1;
-    imgPos = { x: 0, y: 0 };
-    cropArea.style.left = "50px";
-    cropArea.style.top = "50px";
-    cropArea.style.width = "150px";
-    cropArea.style.height = "150px";
+/* ====== Filters ====== */
+Object.keys(controls).forEach(k=>{
+  controls[k].addEventListener('input', ()=>{
+    labels.vBright.textContent = controls.brightness.value + '%';
+    labels.vContrast.textContent = controls.contrast.value + '%';
+    labels.vSat.textContent = controls.saturation.value + '%';
+    labels.vBlur.textContent = controls.blur.value + 'px';
     updateImageTransform();
+  });
+});
+function resetFilters(){
+  controls.brightness.value=100; controls.contrast.value=100; controls.saturation.value=100;
+  controls.blur.value=0; controls.grayscale.value=0; controls.sepia.value=0;
+  updateImageTransform();
 }
 
-/* --- Export réel sans image noire --- */
-function applyCrop() {
-    const img = imageDisplay;
-    const crop = cropArea;
-    const container = cropContainer;
-
-    const imgNatW = img.naturalWidth;
-    const imgNatH = img.naturalHeight;
-
-    const displayW = imgNatW * currentZoom;
-    const displayH = imgNatH * currentZoom;
-
-    const scaleX = imgNatW / displayW;
-    const scaleY = imgNatH / displayH;
-
-    const imgRect = img.getBoundingClientRect();
-    const cropRect = crop.getBoundingClientRect();
-
-    const offsetX = (cropRect.left - imgRect.left) * scaleX;
-    const offsetY = (cropRect.top - imgRect.top) * scaleY;
-    const cropW = cropRect.width * scaleX;
-    const cropH = cropRect.height * scaleY;
-
-    let canvas = document.createElement("canvas");
-    canvas.width = cropW;
-    canvas.height = cropH;
-
-    let ctx = canvas.getContext("2d");
-
-    ctx.drawImage(
-        img,
-        offsetX,
-        offsetY,
-        cropW,
-        cropH,
-        0,
-        0,
-        cropW,
-        cropH
-    );
-
-    let link = document.createElement("a");
-    link.download = "pixlab_crop.png";
-    link.href = canvas.toDataURL();
-    link.click();
+/* ====== Add text & stickers (simple draggable elements) ====== */
+document.getElementById('addText').addEventListener('click',()=>{
+  const text = document.getElementById('txtInput').value.trim(); if(!text) return;
+  const size = parseInt(document.getElementById('txtSize').value)||36;
+  const color = document.getElementById('txtColor').value||'#fff';
+  const el = document.createElement('div');
+  el.className='layer';
+  el.style.position='absolute';
+  el.style.left = (cropContainer.clientWidth/2 - 50)+'px';
+  el.style.top = (cropContainer.clientHeight/2 - 20)+'px';
+  el.style.pointerEvents='auto';
+  el.style.cursor='move';
+  el.innerText = text;
+  el.style.color = color;
+  el.style.fontSize = size + 'px';
+  el.style.fontWeight = '700';
+  el.style.userSelect='none';
+  makeLayerDraggable(el);
+  layers.appendChild(el);
+});
+function makeLayerDraggable(el){
+  let dragging=false, sx=0, sy=0;
+  el.addEventListener('mousedown', (e)=>{ dragging=true; sx = e.clientX - parseFloat(el.style.left); sy = e.clientY - parseFloat(el.style.top); e.stopPropagation(); });
+  document.addEventListener('mouseup', ()=>dragging=false);
+  document.addEventListener('mousemove', (e)=>{ if(!dragging) return; el.style.left = (e.clientX - sx) + 'px'; el.style.top = (e.clientY - sy) + 'px'; });
+  // touch
+  el.addEventListener('touchstart',(ev)=>{ const t=ev.touches[0]; dragging=true; sx = t.clientX - parseFloat(el.style.left); sy = t.clientY - parseFloat(el.style.top); ev.stopPropagation();});
+  document.addEventListener('touchend',()=>dragging=false);
+  document.addEventListener('touchmove',(ev)=>{ if(!dragging) return; const t=ev.touches[0]; el.style.left = (t.clientX - sx) + 'px'; el.style.top = (t.clientY - sy) + 'px'; });
 }
+
+/* stickers */
+document.querySelectorAll('.stickerBtn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    const s = document.createElement('div');
+    s.className='layer';
+    s.style.position='absolute';
+    s.style.left = (cropContainer.clientWidth/2 - 40)+'px';
+    s.style.top = (cropContainer.clientHeight/2 - 40)+'px';
+    s.style.pointerEvents='auto';
+    s.style.cursor='move';
+    s.style.fontSize = '56px';
+    s.innerText = b.textContent;
+    makeLayerDraggable(s);
+    layers.appendChild(s);
+  });
+});
+
+/* ====== Export (robuste) ======
+ We will:
+ 1) Create an offscreen canvas representing the full displayed image after transforms.
+ 2) Render the original image onto that canvas applying rotation, flip and scale (currentZoom).
+ 3) Then compute crop area relative to that rendered canvas (cropRect - imageDisplayedTopLeft).
+ 4) Create final canvas of required size, copy the crop portion.
+ 5) Apply mask (round) / text & stickers by re-drawing them on final canvas with same transforms.
+*/
+btnExport.addEventListener('click', async ()=>{
+  if(!img.src) { alert('Importe d\'abord une image'); return; }
+
+  // 1) compute displayed image rectangle (unrotated logical rectangle BEFORE css-rotation)
+  // We used transform-origin: 0 0 and applied translate(imgPos) then rotate then scale.
+  // So the top-left of the image before transformations is at (imgPos.x, imgPos.y) relative to cropContainer.
+
+  const contRect = cropContainer.getBoundingClientRect();
+  const imgDisplayW = img.naturalWidth * currentZoom;
+  const imgDisplayH = img.naturalHeight * currentZoom;
+  // The image CSS transform rotates around origin (0,0) so its axis is anchored at imgPos.
+  const imgLeft = contRect.left + imgPos.x;
+  const imgTop  = contRect.top  + imgPos.y;
+
+  // get crop rect in client coords
+  const cropRect = cropArea.getBoundingClientRect();
+
+  // create an offscreen canvas large enough to render the transformed image
+  // We'll render at natural size * currentZoom to preserve detail
+  const renderW = Math.round(imgDisplayW);
+  const renderH = Math.round(imgDisplayH);
+  const renderCanvas = document.createElement('canvas');
+  renderCanvas.width = renderW;
+  renderCanvas.height = renderH;
+  const rctx = renderCanvas.getContext('2d');
+
+  // apply high quality
+  rctx.imageSmoothingEnabled = true;
+  rctx.imageSmoothingQuality = 'high';
+
+  // move origin if flipped/rotated: because we transformed using origin 0,0 we replicate that:
+  rctx.save();
+  // translate to zero (we want image top-left at 0,0), but rotation must be applied around 0,0 like in CSS:
+  // Compose: translate(0,0) rotate(angle) scale(scaleX,scaleY)
+  // However rotation rotates the whole canvas; to reproduce the CSS (which does rotate around top-left),
+  // we can just apply rotate and scale and then draw the image at (0,0) with scaled size.
+  // But rotating around top-left may push parts outside; that's fine because we'll still compute crop.
+  // Apply rotation:
+  const rad = currentRotation * Math.PI / 180;
+  rctx.translate(0,0);
+  rctx.rotate(rad);
+  rctx.scale(flipH ? -currentZoom : currentZoom, flipV ? -currentZoom : currentZoom);
+  // draw original image at origin (0,0) but note that when rotated the coordinate axes change.
+  // To match CSS where rotate is applied after translate(imgPos), we rendered a canvas that corresponds to the image box after translate was applied — OK.
+
+  // But when rotate is non-zero the drawn image may extend negatively. To handle that, we'll draw with drawImage and later compute mapping.
+  // Draw image at (0,0) in this rotated/scaled canvas:
+  rctx.drawImage(img, 0, 0);
+  rctx.restore();
+
+  // compute the position of cropRect relative to rendered canvas coordinate system
+  // Because the render canvas corresponds to the image's local coordinate system before screen transform origin,
+  // we need map the screen crop coords into that system.
+  // Approach:
+  // - compute vector from image top-left (imgLeft,imgTop) to cropRect top-left
+  // - that vector in client coords corresponds to coordinates in rendered canvas before rotation; to correct rotation effects, we'll inverse-rotate the vector around origin (0,0).
+
+  const dx = cropRect.left - imgLeft;
+  const dy = cropRect.top  - imgTop;
+
+  // Inverse rotate the (dx,dy) by -rad to get coordinates in pre-rotated canvas
+  const cos = Math.cos(-rad), sin = Math.sin(-rad);
+  const ux = dx * cos - dy * sin;
+  const uy = dx * sin + dy * cos;
+
+  // since we scaled (including flip) by currentZoom (or -currentZoom), the pixels in rendered canvas are already scaled.
+  // So the crop in rendered canvas coordinates is:
+  const cropX_on_render = Math.round(ux);
+  const cropY_on_render = Math.round(uy);
+  const cropW_on_render = Math.round(cropRect.width);
+  const cropH_on_render = Math.round(cropRect.height);
+
+  // create final canvas sized to crop with proper resolution (we'll export at same pixel density as natural image)
+  // To get final image in natural pixels, we need to convert rendered-canvas pixels back to natural image pixels:
+  // rendered canvas has size = natural * currentZoom (but after rotation axes maybe swapped)
+  // So scale factor from rendered -> natural = 1 / currentZoom
+  const finalW = Math.round(cropW_on_render / currentZoom);
+  const finalH = Math.round(cropH_on_render / currentZoom);
+
+  const finalCanvas = document.createElement('canvas');
+  finalCanvas.width = finalW;
+  finalCanvas.height = finalH;
+  const fctx = finalCanvas.getContext('2d');
+
+  // draw the portion from rendered canvas into final canvas scaled down (rendered -> natural)
+  fctx.imageSmoothingQuality = 'high';
+  fctx.drawImage(renderCanvas,
+    cropX_on_render, cropY_on_render, cropW_on_render, cropH_on_render,
+    0,0, finalW, finalH
+  );
+
+  // Draw layers (text & stickers) — need to rasterize layers relative to crop and scale
+  // We'll iterate children of layers and paint them onto final canvas
+  const layerEls = Array.from(layers.children);
+  layerEls.forEach(el=>{
+    // compute style
+    const rect = el.getBoundingClientRect();
+    const contRect2 = cropContainer.getBoundingClientRect();
+    const lx = rect.left - contRect2.left; const ly = rect.top - contRect2.top;
+    const lw = rect.width; const lh = rect.height;
+    // position relative to crop:
+    const relX = lx - (cropRect.left - contRect2.left);
+    const relY = ly - (cropRect.top - contRect2.top);
+    // scale from display px => final canvas px: factor = finalW / cropRect.width
+    const factor = finalW / cropRect.width;
+    // simple draw: if it's text (no images) draw via fillText
+    const style = window.getComputedStyle(el);
+    const fontSize = parseFloat(style.fontSize || 20) * factor;
+    fctx.save();
+    fctx.fillStyle = style.color || '#fff';
+    fctx.textBaseline = 'top';
+    fctx.font = `${Math.round(fontSize)}px ${style.fontFamily || 'Arial'}`;
+    fctx.fillText(el.innerText, Math.round(relX*factor), Math.round(relY*factor));
+    fctx.restore();
+  });
+
+  // apply round mask if needed
+  if(roundMask.checked){
+    const mask = document.createElement('canvas');
+    mask.width = finalW; mask.height = finalH;
+    const mctx = mask.getContext('2d');
+    mctx.fillStyle = '#000';
+    mctx.fillRect(0,0,finalW,finalH);
+    mctx.globalCompositeOperation = 'destination-out';
+    mctx.beginPath();
+    mctx.arc(finalW/2, finalH/2, Math.min(finalW,finalH)/2, 0, Math.PI*2);
+    mctx.fill();
+    // apply mask to final (by compositing)
+    fctx.globalCompositeOperation = 'destination-out';
+    fctx.drawImage(mask,0,0);
+    fctx.globalCompositeOperation = 'source-over';
+  }
+
+  // export
+  const fmt = exportFormat.value === 'jpeg' ? 'image/jpeg' : 'image/png';
+  const dataURL = finalCanvas.toDataURL(fmt, 0.92);
+  const link = document.createElement('a');
+  link.href = dataURL;
+  link.download = `pixlab_export.${exportFormat.value}`;
+  link.click();
+
+}); // end export
+
+/* ====== Reset all ====== */
+btnReset.addEventListener('click', ()=>{
+  // reset UI & state
+  imageDisplay.src = '';
+  img = new Image();
+  cropContainer.style.width = '820px';
+  cropContainer.style.height = '460px';
+  cropArea.style.left='40px'; cropArea.style.top='40px'; cropArea.style.width='400px'; cropArea.style.height='300px';
+  imgPos={x:0,y:0}; currentZoom=1; currentRotation=0; flipH=false; flipV=false;
+  layers.innerHTML='';
+  resetFilters();
+  updateImageTransform();
+});
+
+/* ====== preview info ====== */
+function updatePreviewInfo(){ 
+  previewSize.textContent = img.naturalWidth ? `${img.naturalWidth}×${img.naturalHeight} (zoom ${Math.round(currentZoom*100)}%)` : '—';
+}
+setInterval(updatePreviewInfo,800);
+
+/* ====== Small UX polish: disable drag image cursor initially ====== */
+imageDisplay.style.cursor='grab';
+updateImageTransform();
 </script>
-
 </body>
 </html>
