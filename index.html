@@ -1,32 +1,35 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PixLab - Mobile Editor</title>
+<title>PixLab Web Editor</title>
 <style>
 body {
     margin: 0;
-    background: #0f0f0f;
     font-family: Arial, sans-serif;
+    background: #0f0f0f;
     color: white;
     overflow: hidden;
 }
 
 #editor {
-    position: fixed;
-    inset: 0;
-    background: #000;
+    position: relative;
+    width: 100vw;
+    height: 80vh;
+    background: #111;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
     touch-action: none;
 }
 
 #image {
     position: absolute;
+    transform-origin: center center;
     max-width: none;
     max-height: none;
-    transform-origin: center center;
 }
 
 #crop {
@@ -57,32 +60,41 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
+    height: 20vh;
     background: #111;
-    padding: 10px;
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    padding: 10px;
+    gap: 8px;
+    align-items: center;
     justify-content: center;
     border-top: 1px solid #333;
 }
 
-button, input[type=range] {
+button, input[type=range], select {
     background: #222;
     border: none;
-    padding: 10px 15px;
+    padding: 8px 12px;
     color: white;
-    border-radius: 10px;
+    border-radius: 8px;
     font-size: 14px;
 }
 
 input[type=range] {
-    width: 120px;
+    width: 100px;
+}
+
+#file {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 20;
 }
 </style>
 </head>
 <body>
 
-<input type="file" id="file" accept="image/*" style="position:fixed;top:10px;left:10px;z-index:20;" />
+<input type="file" id="file" accept="image/*" />
 
 <div id="editor">
     <img id="image" />
@@ -96,9 +108,22 @@ input[type=range] {
 
 <div id="tools">
     <button id="exportBtn">Exporter PNG</button>
+    <button id="rotateLeft">⟲ 90°</button>
+    <button id="rotateRight">⟳ 90°</button>
+    <button id="flipH">Flip H</button>
+    <button id="flipV">Flip V</button>
     <input type="range" id="radius" min="0" max="150" value="0" title="Border radius">
-    <button id="rotateLeft">⟲</button>
-    <button id="rotateRight">⟳</button>
+    <input type="range" id="brightness" min="0" max="200" value="100" title="Brightness">
+    <input type="range" id="contrast" min="0" max="200" value="100" title="Contrast">
+    <select id="filter">
+        <option value="none">Normal</option>
+        <option value="grayscale(100%)">Noir/Blanc</option>
+        <option value="sepia(80%)">Sepia</option>
+        <option value="invert(100%)">Invert</option>
+    </select>
+    <button id="addText">Ajouter Texte</button>
+    <button id="undo">Undo</button>
+    <button id="redo">Redo</button>
 </div>
 
 <script>
@@ -108,10 +133,32 @@ const radiusSlider = document.getElementById("radius");
 const exportBtn = document.getElementById("exportBtn");
 const rotateLeftBtn = document.getElementById("rotateLeft");
 const rotateRightBtn = document.getElementById("rotateRight");
+const flipHBtn = document.getElementById("flipH");
+const flipVBtn = document.getElementById("flipV");
+const brightnessSlider = document.getElementById("brightness");
+const contrastSlider = document.getElementById("contrast");
+const filterSelect = document.getElementById("filter");
+const addTextBtn = document.getElementById("addText");
+const undoBtn = document.getElementById("undo");
+const redoBtn = document.getElementById("redo");
 
 let scale = 1, lastDist = 0;
 let dragging = false, startX = 0, startY = 0, imgX = 0, imgY = 0;
 let rotation = 0;
+let flipH = 1, flipV = 1;
+let history = [], redoStack = [];
+
+function saveHistory() {
+    const data = {
+        scale, imgX, imgY, rotation, flipH, flipV,
+        radius: radiusSlider.value,
+        brightness: brightnessSlider.value,
+        contrast: contrastSlider.value,
+        filter: filterSelect.value
+    };
+    history.push(JSON.stringify(data));
+    redoStack = [];
+}
 
 /* ========= CHARGEMENT IMAGE ========= */
 document.getElementById("file").onchange = e => {
@@ -120,18 +167,25 @@ document.getElementById("file").onchange = e => {
     img.onload = () => {
         scale = 1;
         rotation = 0;
-        img.style.left = "0px";
-        img.style.top = "0px";
-        img.style.transform = `scale(${scale}) rotate(0deg)`;
+        imgX = 0;
+        imgY = 0;
+        flipH = flipV = 1;
+        img.style.transform = `scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`;
+        img.style.left = imgX + "px";
+        img.style.top = imgY + "px";
         crop.style.left = "50px";
         crop.style.top = "50px";
         crop.style.width = "200px";
         crop.style.height = "200px";
         crop.style.borderRadius = "0px";
+        brightnessSlider.value = 100;
+        contrastSlider.value = 100;
+        filterSelect.value = "none";
+        saveHistory();
     };
 };
 
-/* ========= PINCH ZOOM ========= */
+/* ========= PINCH ZOOM MOBILE ========= */
 document.addEventListener("touchmove", e => {
     if (e.touches.length === 2) {
         e.preventDefault();
@@ -141,11 +195,10 @@ document.addEventListener("touchmove", e => {
         if (!lastDist) lastDist = dist;
         scale += (dist - lastDist) * 0.005;
         scale = Math.max(0.3, Math.min(5, scale));
-        img.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+        img.style.transform = `scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`;
         lastDist = dist;
     }
 }, { passive: false });
-
 document.addEventListener("touchend", () => lastDist = 0);
 
 /* ========= DRAG IMAGE ========= */
@@ -156,7 +209,6 @@ document.addEventListener("touchstart", e => {
         startY = e.touches[0].clientY - imgY;
     }
 });
-
 document.addEventListener("touchmove", e => {
     if (dragging && e.touches.length === 1) {
         imgX = e.touches[0].clientX - startX;
@@ -165,111 +217,116 @@ document.addEventListener("touchmove", e => {
         img.style.top = imgY + "px";
     }
 });
-
 document.addEventListener("touchend", () => dragging = false);
 
-/* ========= HANDLE RESIZE ========= */
-let resizing = false, currentHandle = null;
-document.querySelectorAll(".handle").forEach(h => {
-    h.addEventListener("touchstart", e => {
-        e.stopPropagation();
-        resizing = true;
-        currentHandle = h;
-    });
-});
-
-document.addEventListener("touchmove", e => {
-    if (!resizing) return;
-    const r = crop.getBoundingClientRect();
-    const x = e.touches[0].clientX;
-    const y = e.touches[0].clientY;
-
-    if (currentHandle.classList.contains("tr")) {
-        crop.style.width = (x - r.left) + "px";
-        crop.style.height = (r.bottom - y) + "px";
-        crop.style.top = y + "px";
-    }
-    if (currentHandle.classList.contains("tl")) {
-        crop.style.width = (r.right - x) + "px";
-        crop.style.height = (r.bottom - y) + "px";
-        crop.style.left = x + "px";
-        crop.style.top = y + "px";
-    }
-    if (currentHandle.classList.contains("bl")) {
-        crop.style.width = (r.right - x) + "px";
-        crop.style.height = (y - r.top) + "px";
-        crop.style.left = x + "px";
-    }
-    if (currentHandle.classList.contains("br")) {
-        crop.style.width = (x - r.left) + "px";
-        crop.style.height = (y - r.top) + "px";
-    }
-}, { passive: false });
-
-document.addEventListener("touchend", () => resizing = false);
-
 /* ========= BORDER RADIUS ========= */
-radiusSlider.oninput = () => {
-    crop.style.borderRadius = radiusSlider.value + "px";
-};
+radiusSlider.oninput = () => crop.style.borderRadius = radiusSlider.value + "px";
 
 /* ========= ROTATION ========= */
-rotateLeftBtn.onclick = () => {
-    rotation -= 90;
-    img.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+rotateLeftBtn.onclick = () => { rotation -= 90; img.style.transform = `scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`; saveHistory(); };
+rotateRightBtn.onclick = () => { rotation += 90; img.style.transform = `scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`; saveHistory(); };
+
+/* ========= FLIP ========= */
+flipHBtn.onclick = () => { flipH *= -1; img.style.transform = `scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`; saveHistory(); };
+flipVBtn.onclick = () => { flipV *= -1; img.style.transform = `scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`; saveHistory(); };
+
+/* ========= FILTERS ========= */
+[brightnessSlider, contrastSlider, filterSelect].forEach(el=>{
+    el.oninput = () => {
+        img.style.filter = `brightness(${brightnessSlider.value}%) contrast(${contrastSlider.value}%) ${filterSelect.value}`;
+        saveHistory();
+    }
+});
+
+/* ========= UNDO / REDO ========= */
+undoBtn.onclick = () => {
+    if(history.length>1){
+        redoStack.push(history.pop());
+        const state = JSON.parse(history[history.length-1]);
+        applyState(state);
+    }
 };
-rotateRightBtn.onclick = () => {
-    rotation += 90;
-    img.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
+redoBtn.onclick = () => {
+    if(redoStack.length){
+        const state = JSON.parse(redoStack.pop());
+        history.push(JSON.stringify(state));
+        applyState(state);
+    }
+};
+function applyState(s){
+    scale=s.scale; imgX=s.imgX; imgY=s.imgY; rotation=s.rotation;
+    flipH=s.flipH; flipV=s.flipV;
+    img.style.left=imgX+'px'; img.style.top=imgY+'px';
+    img.style.transform=`scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`;
+    radiusSlider.value=s.radius; crop.style.borderRadius=s.radius+'px';
+    brightnessSlider.value=s.brightness; contrastSlider.value=s.contrast;
+    filterSelect.value=s.filter;
+    img.style.filter=`brightness(${s.brightness}%) contrast(${s.contrast}%) ${s.filter}`;
+}
+
+/* ========= ADD TEXT ========= */
+addTextBtn.onclick = () => {
+    const text = prompt("Texte à ajouter:");
+    if(!text) return;
+    const span = document.createElement("div");
+    span.innerText = text;
+    span.style.position="absolute";
+    span.style.left="60px";
+    span.style.top="60px";
+    span.style.color="white";
+    span.style.fontSize="24px";
+    span.style.userSelect="none";
+    span.style.cursor="move";
+    document.getElementById("editor").appendChild(span);
+
+    // drag texte
+    let tDrag=false, tX=0,tY=0;
+    span.addEventListener("mousedown",(e)=>{tDrag=true;tX=e.offsetX;tY=e.offsetY;});
+    document.addEventListener("mousemove",(e)=>{if(tDrag){span.style.left=(e.pageX-tX)+'px';span.style.top=(e.pageY-tY)+'px';}});
+    document.addEventListener("mouseup",()=>{tDrag=false;});
 };
 
 /* ========= EXPORT ========= */
 exportBtn.onclick = () => {
-    if (!img.src) return alert("Importe d'abord une image !");
+    if(!img.src) return alert("Importe d'abord une image !");
+    const r=crop.getBoundingClientRect();
+    const editorRect=document.getElementById("editor").getBoundingClientRect();
+    const canvas=document.createElement("canvas");
+    canvas.width=r.width; canvas.height=r.height;
+    const ctx=canvas.getContext("2d");
 
-    const r = crop.getBoundingClientRect();
-    const editorRect = document.getElementById("editor").getBoundingClientRect();
-    const canvas = document.createElement("canvas");
-    canvas.width = r.width;
-    canvas.height = r.height;
-    const ctx = canvas.getContext("2d");
-
-    const imgRect = img.getBoundingClientRect();
-    const offsetX = r.left - imgRect.left;
-    const offsetY = r.top - imgRect.top;
-
-    ctx.save();
-    if (radiusSlider.value > 0) {
+    // appliquer clipping
+    const radius=parseInt(radiusSlider.value);
+    if(radius>0){
         ctx.beginPath();
-        const radius = parseInt(radiusSlider.value);
-        ctx.moveTo(radius, 0);
-        ctx.lineTo(r.width - radius, 0);
-        ctx.quadraticCurveTo(r.width, 0, r.width, radius);
-        ctx.lineTo(r.width, r.height - radius);
-        ctx.quadraticCurveTo(r.width, r.height, r.width - radius, r.height);
-        ctx.lineTo(radius, r.height);
-        ctx.quadraticCurveTo(0, r.height, 0, r.height - radius);
-        ctx.lineTo(0, radius);
-        ctx.quadraticCurveTo(0, 0, radius, 0);
-        ctx.closePath();
-        ctx.clip();
+        ctx.moveTo(radius,0);
+        ctx.lineTo(canvas.width-radius,0);
+        ctx.quadraticCurveTo(canvas.width,0,canvas.width,radius);
+        ctx.lineTo(canvas.width,canvas.height-radius);
+        ctx.quadraticCurveTo(canvas.width,canvas.height,canvas.width-radius,canvas.height);
+        ctx.lineTo(radius,canvas.height);
+        ctx.quadraticCurveTo(0,canvas.height,0,canvas.height-radius);
+        ctx.lineTo(0,radius);
+        ctx.quadraticCurveTo(0,0,radius,0);
+        ctx.closePath(); ctx.clip();
     }
 
-    ctx.translate(canvas.width/2, canvas.height/2);
-    ctx.rotate(rotation * Math.PI/180);
-    ctx.drawImage(img,
-        -img.width/2 + offsetX, 
-        -img.height/2 + offsetY,
-        img.width * scale,
-        img.height * scale
-    );
+    // appliquer transformations
+    const imgRect=img.getBoundingClientRect();
+    const offsetX=r.left-imgRect.left;
+    const offsetY=r.top-imgRect.top;
+
+    ctx.save();
+    ctx.translate(canvas.width/2,canvas.height/2);
+    ctx.rotate(rotation*Math.PI/180);
+    ctx.scale(flipH,flipV);
+    ctx.filter=`brightness(${brightnessSlider.value}%) contrast(${contrastSlider.value}%) ${filterSelect.value}`;
+    ctx.drawImage(img,-img.width/2+offsetX,-img.height/2+offsetY,img.width*scale,img.height*scale);
     ctx.restore();
 
-    const dataURL = canvas.toDataURL("image/png");
-    const link = document.createElement("a");
-    link.href = dataURL;
-    link.download = "pixlab.png";
-    link.click();
+    const dataURL=canvas.toDataURL("image/png");
+    const link=document.createElement("a");
+    link.href=dataURL; link.download="pixlab.png"; link.click();
 };
 </script>
 </body>
