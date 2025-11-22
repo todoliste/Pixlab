@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PixLab CapCut Web</title>
+<title>PixLab - CapCut Web</title>
 <style>
 body {margin:0; font-family:Arial,sans-serif; background:#0f0f0f; color:white; overflow:hidden;}
-#editor {position:relative; width:100vw; height:75vh; background:#111; display:flex; align-items:center; justify-content:center; overflow:hidden;}
-#image {position:absolute; transform-origin:center center; max-width:100%; max-height:100%; touch-action:none;}
+#editor {position:relative; width:100vw; height:80vh; background:#111; display:flex; align-items:center; justify-content:center; overflow:hidden;}
+#image {position:absolute; transform-origin:center center; max-width:none; max-height:none;}
 #crop {position:absolute; border:2px solid white; box-sizing:border-box; touch-action:none;}
 .handle {width:20px; height:20px; background:white; border-radius:50%; position:absolute; transform:translate(-50%,-50%);}
 .handle.tl {top:0; left:0;} .handle.tr {top:0; right:0;} .handle.bl {bottom:0; left:0;} .handle.br {bottom:0; right:0;}
-#tools {position:fixed; bottom:0; left:0; right:0; height:25vh; background:#111; display:flex; flex-wrap:wrap; padding:5px; gap:5px; align-items:center; justify-content:center;}
-button,input[type=range],select{background:#222; border:none; padding:6px 10px; color:white; border-radius:6px;}
+#tools {position:fixed; bottom:0; left:0; right:0; height:20vh; background:#111; display:flex; align-items:center; overflow-x:auto; white-space:nowrap; padding:5px; gap:5px;}
+#tools button,input[type=range],select{background:#222; border:none; padding:6px 12px; color:white; border-radius:10px; margin:0 5px; flex:none;}
 input[type=range]{width:80px;}
 #file{position:fixed;top:10px;left:10px; z-index:20;}
 .sticker, .textLayer{position:absolute; cursor:move; user-select:none;}
@@ -30,8 +30,8 @@ input[type=range]{width:80px;}
 
 <div id="tools">
 <button id="exportBtn">Exporter PNG</button>
-<button id="rotateLeft">⟲ 90°</button>
-<button id="rotateRight">⟳ 90°</button>
+<button id="rotateLeft">⟲</button>
+<button id="rotateRight">⟳</button>
 <button id="flipH">Flip H</button>
 <button id="flipV">Flip V</button>
 <input type="range" id="radius" min="0" max="150" value="0" title="Border radius">
@@ -44,12 +44,10 @@ input[type=range]{width:80px;}
 <option value="sepia(80%)">Sepia</option>
 <option value="invert(100%)">Invert</option>
 </select>
-<button id="addText">Ajouter Texte</button>
-<button id="addSticker">Ajouter Sticker</button>
-<button id="undo">Undo</button>
-<button id="redo">Redo</button>
+<button id="addText">Texte</button>
+<button id="addSticker">Sticker</button>
 <select id="cropShape">
-<option value="rect">Carré/Rect</option>
+<option value="rect">Carré</option>
 <option value="circle">Cercle</option>
 <option value="16:9">16:9</option>
 <option value="4:3">4:3</option>
@@ -71,41 +69,12 @@ const flipVBtn=document.getElementById("flipV");
 const addTextBtn=document.getElementById("addText");
 const addStickerBtn=document.getElementById("addSticker");
 const exportBtn=document.getElementById("exportBtn");
-const undoBtn=document.getElementById("undo");
-const redoBtn=document.getElementById("redo");
 const cropShapeSelect=document.getElementById("cropShape");
 
 let imgX=0,imgY=0,scale=1,rotation=0,flipH=1,flipV=1;
 let dragging=false,startX=0,startY=0;
-let history=[],redoStack=[];
 
-// -------------------- UTILS --------------------
-function saveHistory(){
-    const layers=[...document.querySelectorAll(".textLayer,.sticker")].map(e=>{
-        return {type:e.className,inner:e.innerText||"",src:e.src||"",x:e.style.left,y:e.style.top,fontSize:e.style.fontSize,color:e.style.color};
-    });
-    history.push(JSON.stringify({imgX,imgY,scale,rotation,flipH,flipV,radius:radiusSlider.value,brightness:brightnessSlider.value,contrast:contrastSlider.value,saturation:saturationSlider.value,filter:filterSelect.value,layers}));
-    redoStack=[];
-}
-function applyState(s){
-    imgX=s.imgX; imgY=s.imgY; scale=s.scale; rotation=s.rotation; flipH=s.flipH; flipV=s.flipV;
-    img.style.left=imgX+'px'; img.style.top=imgY+'px';
-    img.style.transform=`scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`;
-    radiusSlider.value=s.radius; crop.style.borderRadius=s.radius+'px';
-    brightnessSlider.value=s.brightness; contrastSlider.value=s.contrast; saturationSlider.value=s.saturation;
-    filterSelect.value=s.filter;
-    img.style.filter=`brightness(${brightnessSlider.value}%) contrast(${contrastSlider.value}%) saturate(${saturationSlider.value}%) ${filterSelect.value}`;
-    document.querySelectorAll(".textLayer,.sticker").forEach(e=>e.remove());
-    s.layers.forEach(l=>{
-        if(l.type.includes("textLayer")){
-            const t=document.createElement("div"); t.className="textLayer"; t.innerText=l.inner; t.style.left=l.x; t.style.top=l.y; t.style.fontSize=l.fontSize; t.style.color=l.color; document.getElementById("editor").appendChild(t);
-        }else{
-            const sE=document.createElement("img"); sE.className="sticker"; sE.src=l.src; sE.style.left=l.x; sE.style.top=l.y; document.getElementById("editor").appendChild(sE);
-        }
-    });
-}
-
-// -------------------- LOAD IMAGE --------------------
+// ---------- LOAD IMAGE ----------
 document.getElementById("file").onchange=e=>{
     const file=e.target.files[0];
     img.src=URL.createObjectURL(file);
@@ -114,57 +83,56 @@ document.getElementById("file").onchange=e=>{
         const ew=editor.clientWidth, eh=editor.clientHeight;
         const w=img.naturalWidth, h=img.naturalHeight;
         let ratio=Math.min(ew/w, eh/h);
-        img.style.width=(w*ratio)+'px'; img.style.height=(h*ratio)+'px';
+        img.style.width=(w*ratio)+'px';
+        img.style.height=(h*ratio)+'px';
         imgX=(ew-w*ratio)/2; imgY=(eh-h*ratio)/2;
         img.style.left=imgX+'px'; img.style.top=imgY+'px';
         scale=1; rotation=0; flipH=flipV=1;
-        crop.style.left=(imgX+50)+'px'; crop.style.top=(imgY+50)+'px'; crop.style.width='200px'; crop.style.height='200px'; crop.style.borderRadius='0px';
-        brightnessSlider.value=contrastSlider.value=saturationSlider.value=100; filterSelect.value='none';
-        saveHistory();
-    };
+        crop.style.left=imgX+'px'; crop.style.top=imgY+'px'; crop.style.width=img.width+'px'; crop.style.height=img.height+'px'; crop.style.borderRadius='0px';
+        img.style.filter='brightness(100%) contrast(100%) saturate(100%)';
+    }
 };
 
-// -------------------- DRAG IMAGE --------------------
+// ---------- DRAG IMAGE ----------
 document.addEventListener("mousedown",e=>{if(e.target===img){dragging=true; startX=e.clientX-imgX; startY=e.clientY-imgY;}});
 document.addEventListener("mousemove",e=>{if(dragging){imgX=e.clientX-startX; imgY=e.clientY-startY; img.style.left=imgX+'px'; img.style.top=imgY+'px';}});
 document.addEventListener("mouseup",()=>dragging=false);
 
-// -------------------- ROTATE / FLIP --------------------
-rotateLeftBtn.onclick=()=>{rotation-=90; img.style.transform=`scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`; saveHistory();};
-rotateRightBtn.onclick=()=>{rotation+=90; img.style.transform=`scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`; saveHistory();};
-flipHBtn.onclick=()=>{flipH*=-1; img.style.transform=`scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`; saveHistory();};
-flipVBtn.onclick=()=>{flipV*=-1; img.style.transform=`scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`; saveHistory();};
+// ---------- TRANSFORM ----------
+function updateTransform(){img.style.transform=`scale(${scale}) rotate(${rotation}deg) scaleX(${flipH}) scaleY(${flipV})`;}
+rotateLeftBtn.onclick=()=>{rotation-=90; updateTransform();};
+rotateRightBtn.onclick=()=>{rotation+=90; updateTransform();};
+flipHBtn.onclick=()=>{flipH*=-1; updateTransform();};
+flipVBtn.onclick=()=>{flipV*=-1; updateTransform();};
 
-// -------------------- FILTERS --------------------
-[brightnessSlider,contrastSlider,saturationSlider,filterSelect].forEach(el=>{el.oninput=()=>{img.style.filter=`brightness(${brightnessSlider.value}%) contrast(${contrastSlider.value}%) saturate(${saturationSlider.value}%) ${filterSelect.value}`; saveHistory();}});
+// ---------- FILTERS ----------
+[brightnessSlider,contrastSlider,saturationSlider,filterSelect].forEach(el=>{
+    el.oninput=()=>{img.style.filter=`brightness(${brightnessSlider.value}%) contrast(${contrastSlider.value}%) saturate(${saturationSlider.value}%) ${filterSelect.value}`;}
+});
 
-// -------------------- BORDER RADIUS --------------------
+// ---------- BORDER RADIUS ----------
 radiusSlider.oninput=()=>crop.style.borderRadius=radiusSlider.value+'px';
 
-// -------------------- UNDO / REDO --------------------
-undoBtn.onclick=()=>{if(history.length>1){redoStack.push(history.pop()); const s=JSON.parse(history[history.length-1]); applyState(s);}};
-redoBtn.onclick=()=>{if(redoStack.length){const s=JSON.parse(redoStack.pop()); history.push(JSON.stringify(s)); applyState(s);}};
-
-// -------------------- ADD TEXT / STICKER --------------------
+// ---------- ADD TEXT / STICKER ----------
 addTextBtn.onclick=()=>{
     const text=prompt("Texte à ajouter"); if(!text) return;
     const t=document.createElement("div"); t.className="textLayer"; t.innerText=text; t.style.left="60px"; t.style.top="60px"; t.style.fontSize="24px"; t.style.color="white"; document.getElementById("editor").appendChild(t);
-    saveHistory();
 };
 addStickerBtn.onclick=()=>{
     const url=prompt("URL du sticker"); if(!url) return;
     const sE=document.createElement("img"); sE.className="sticker"; sE.src=url; sE.style.left="60px"; sE.style.top="60px"; sE.style.width="60px"; sE.style.height="60px"; document.getElementById("editor").appendChild(sE);
-    saveHistory();
 };
 
-// -------------------- CROP SHAPE --------------------
+// ---------- CROP SHAPE ----------
 cropShapeSelect.onchange=()=>{
     const val=cropShapeSelect.value;
-    if(val==='circle'){crop.style.borderRadius='50%';}else if(val==='rect'){crop.style.borderRadius='0%';}else if(val==='16:9'){crop.style.height=(crop.offsetWidth*9/16)+'px'; crop.style.borderRadius='0';}
+    if(val==='circle'){crop.style.borderRadius='50%';}
+    else if(val==='rect'){crop.style.borderRadius='0%';}
+    else if(val==='16:9'){crop.style.height=(crop.offsetWidth*9/16)+'px'; crop.style.borderRadius='0';}
     else if(val==='4:3'){crop.style.height=(crop.offsetWidth*3/4)+'px'; crop.style.borderRadius='0';}
 };
 
-// -------------------- EXPORT --------------------
+// ---------- EXPORT ----------
 exportBtn.onclick=()=>{
     if(!img.src) return alert("Importe d'abord une image !");
     const r=crop.getBoundingClientRect();
@@ -173,23 +141,16 @@ exportBtn.onclick=()=>{
     canvas.width=r.width; canvas.height=r.height;
     const ctx=canvas.getContext("2d");
 
+    const offsetX=r.left-editorRect.left;
+    const offsetY=r.top-editorRect.top;
+
     const radius=parseInt(radiusSlider.value);
     if(radius>0 || cropShapeSelect.value==='circle'){
         ctx.beginPath();
-        if(cropShapeSelect.value==='circle'){
-            ctx.arc(canvas.width/2,canvas.height/2,canvas.width/2,0,Math.PI*2);
-        }else{
-            ctx.moveTo(radius,0); ctx.lineTo(canvas.width-radius,0);
-            ctx.quadraticCurveTo(canvas.width,0,canvas.width,radius);
-            ctx.lineTo(canvas.width,canvas.height-radius); ctx.quadraticCurveTo(canvas.width,canvas.height,canvas.width-radius,canvas.height);
-            ctx.lineTo(radius,canvas.height); ctx.quadraticCurveTo(0,canvas.height,0,canvas.height-radius);
-            ctx.lineTo(0,radius); ctx.quadraticCurveTo(0,0,radius,0);
-        }
+        if(cropShapeSelect.value==='circle'){ctx.arc(canvas.width/2,canvas.height/2,canvas.width/2,0,Math.PI*2);}
+        else{ctx.moveTo(radius,0); ctx.lineTo(canvas.width-radius,0); ctx.quadraticCurveTo(canvas.width,0,canvas.width,radius); ctx.lineTo(canvas.width,canvas.height-radius); ctx.quadraticCurveTo(canvas.width,canvas.height,canvas.width-radius,canvas.height); ctx.lineTo(radius,canvas.height); ctx.quadraticCurveTo(0,canvas.height,0,canvas.height-radius); ctx.lineTo(0,radius); ctx.quadraticCurveTo(0,0,radius,0);}
         ctx.closePath(); ctx.clip();
     }
-
-    const offsetX=r.left-editorRect.left;
-    const offsetY=r.top-editorRect.top;
 
     ctx.save();
     ctx.translate(canvas.width/2,canvas.height/2);
@@ -199,10 +160,10 @@ exportBtn.onclick=()=>{
     ctx.drawImage(img,-img.width/2-offsetX,-img.height/2-offsetY,img.width*scale,img.height*scale);
     ctx.restore();
 
-    const dataURL=canvas.toDataURL("image/png");
     const link=document.createElement("a");
-    link.href=dataURL; link.download="pixlab.png"; link.click();
+    link.href=canvas.toDataURL("image/png"); link.download="pixlab.png"; link.click();
 };
 </script>
+
 </body>
 </html>
