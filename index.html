@@ -4,41 +4,41 @@
 <meta charset="UTF-8">
 <title>Masque Flou Drag & Drop</title>
 <style>
-  body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: #111;
-    color: #fff;
-    font-family: sans-serif;
-    margin: 0;
-    padding: 20px;
-  }
-  canvas {
-    border: 2px solid #fff;
-    cursor: grab;
-  }
-  #controls {
-    margin: 10px;
-  }
-  input, button, select {
-    margin: 5px;
-    padding: 5px 10px;
-    font-size: 16px;
-  }
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #111;
+  color: #fff;
+  font-family: sans-serif;
+  margin: 0;
+  padding: 20px;
+}
+canvas {
+  border: 2px solid #fff;
+  touch-action: none; /* pour mobile */
+}
+#controls {
+  margin: 10px;
+}
+input, button, select {
+  margin: 5px;
+  padding: 5px 10px;
+  font-size: 16px;
+}
 </style>
 </head>
 <body>
 <h1>Masque Flou Drag & Drop</h1>
 <input type="file" id="upload" accept="image/*">
 <div id="controls">
-  <label>Forme :
+  <label>Forme:
     <select id="shape">
       <option value="rect">Rectangle</option>
       <option value="circle">Cercle</option>
     </select>
   </label>
-  <label>Flou :
+  <label>Flou:
     <input type="range" id="blurRange" min="0" max="30" value="10">
   </label>
   <button id="reset">Réinitialiser</button>
@@ -54,92 +54,130 @@ const shapeSelect = document.getElementById('shape');
 const blurRange = document.getElementById('blurRange');
 
 let img = new Image();
-let mask = {x: 200, y: 150, w: 400, h: 300};
+let mask = {x:200, y:150, w:400, h:300};
 let dragging = false;
-let offsetX, offsetY;
+let resizing = false;
+let dragOffsetX, dragOffsetY;
+let resizeCorner = null;
+const corners = 12;
 
-upload.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = event => img.src = event.target.result;
-    reader.readAsDataURL(file);
+// Charger l'image
+upload.addEventListener('change', e=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=event=>img.src=event.target.result;
+  reader.readAsDataURL(file);
 });
 
-function draw() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+// Dessiner image + masque
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(img.src) ctx.drawImage(img,0,0,canvas.width,canvas.height);
 
-    // Appliquer le flou dans le masque
-    ctx.save();
-    ctx.filter = `blur(${blurRange.value}px)`;
-    ctx.beginPath();
-    if(shapeSelect.value === 'rect') {
-        ctx.rect(mask.x, mask.y, mask.w, mask.h);
-    } else {
-        ctx.arc(mask.x + mask.w/2, mask.y + mask.h/2, Math.min(mask.w, mask.h)/2, 0, Math.PI*2);
-    }
-    ctx.clip();
-    ctx.drawImage(img,0,0,canvas.width,canvas.height);
-    ctx.restore();
+  // Flou
+  ctx.save();
+  ctx.filter=`blur(${blurRange.value}px)`;
+  ctx.beginPath();
+  if(shapeSelect.value==='rect'){
+    ctx.rect(mask.x,mask.y,mask.w,mask.h);
+  } else {
+    ctx.arc(mask.x+mask.w/2,mask.y+mask.h/2,Math.min(mask.w,mask.h)/2,0,Math.PI*2);
+  }
+  ctx.clip();
+  if(img.src) ctx.drawImage(img,0,0,canvas.width,canvas.height);
+  ctx.restore();
 
-    // Contour du masque
-    ctx.strokeStyle = '#0f0';
-    ctx.lineWidth = 3;
+  // Contour masque
+  ctx.strokeStyle='#0f0';
+  ctx.lineWidth=2;
+  if(shapeSelect.value==='rect'){
+    ctx.strokeRect(mask.x,mask.y,mask.w,mask.h);
+    drawCorners();
+  } else {
     ctx.beginPath();
-    if(shapeSelect.value === 'rect') {
-        ctx.strokeRect(mask.x, mask.y, mask.w, mask.h);
-    } else {
-        ctx.arc(mask.x + mask.w/2, mask.y + mask.h/2, Math.min(mask.w, mask.h)/2, 0, Math.PI*2);
-        ctx.stroke();
-    }
+    ctx.arc(mask.x+mask.w/2,mask.y+mask.h/2,Math.min(mask.w,mask.h)/2,0,Math.PI*2);
+    ctx.stroke();
+  }
 }
 
-// Drag & Drop
-canvas.addEventListener('mousedown', e => {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+// Dessiner coins pour redimension rectangle
+function drawCorners(){
+  const points=[
+    {x:mask.x,y:mask.y},
+    {x:mask.x+mask.w,y:mask.y},
+    {x:mask.x,y:mask.y+mask.h},
+    {x:mask.x+mask.w,y:mask.y+mask.h},
+  ];
+  ctx.fillStyle='#0f0';
+  points.forEach(p=>ctx.fillRect(p.x-corners/2,p.y-corners/2,corners,corners));
+}
 
-    if(shapeSelect.value === 'rect' &&
-       x > mask.x && x < mask.x + mask.w &&
-       y > mask.y && y < mask.y + mask.h) {
-        dragging = true;
-        offsetX = x - mask.x;
-        offsetY = y - mask.y;
-        canvas.style.cursor = 'grabbing';
-    } else if(shapeSelect.value === 'circle') {
-        const cx = mask.x + mask.w/2;
-        const cy = mask.y + mask.h/2;
-        const r = Math.min(mask.w, mask.h)/2;
-        if(Math.hypot(x-cx, y-cy) <= r){
-            dragging = true;
-            offsetX = x - mask.x;
-            offsetY = y - mask.y;
-            canvas.style.cursor = 'grabbing';
-        }
+// Vérifier si clic sur coin
+function getCorner(x,y){
+  const points=[
+    {name:'tl',x:mask.x,y:mask.y},
+    {name:'tr',x:mask.x+mask.w,y:mask.y},
+    {name:'bl',x:mask.x,y:mask.y+mask.h},
+    {name:'br',x:mask.x+mask.w,y:mask.y+mask.h},
+  ];
+  for(let p of points){
+    if(Math.abs(x-p.x)<corners && Math.abs(y-p.y)<corners) return p.name;
+  }
+  return null;
+}
+
+// Support souris et tactile
+function getXY(e){
+  const rect=canvas.getBoundingClientRect();
+  let x,y;
+  if(e.touches) {x=e.touches[0].clientX-rect.left; y=e.touches[0].clientY-rect.top;}
+  else {x=e.clientX-rect.left; y=e.clientY-rect.top;}
+  return {x,y};
+}
+
+// Mouse & Touch events
+function startDrag(e){
+  const {x,y}=getXY(e);
+  resizeCorner=getCorner(x,y);
+  if(resizeCorner){resizing=true; return;}
+  if(shapeSelect.value==='rect' && x>mask.x && x<mask.x+mask.w && y>mask.y && y<mask.y+mask.h){
+    dragging=true; dragOffsetX=x-mask.x; dragOffsetY=y-mask.y;
+  } else if(shapeSelect.value==='circle'){
+    const cx=mask.x+mask.w/2, cy=mask.y+mask.h/2;
+    const r=Math.min(mask.w,mask.h)/2;
+    if(Math.hypot(x-cx,y-cy)<=r){dragging=true; dragOffsetX=x-mask.x; dragOffsetY=y-mask.y;}
+  }
+}
+function moveDrag(e){
+  const {x,y}=getXY(e);
+  if(resizing){
+    switch(resizeCorner){
+      case'tl': mask.w+=mask.x-x; mask.h+=mask.y-y; mask.x=x; mask.y=y; break;
+      case'tr': mask.w=x-mask.x; mask.h+=mask.y-y; mask.y=y; break;
+      case'bl': mask.w+=mask.x-x; mask.h=y-mask.y; mask.x=x; break;
+      case'br': mask.w=x-mask.x; mask.h=y-mask.y; break;
     }
-});
-canvas.addEventListener('mouseup', ()=>{ dragging=false; canvas.style.cursor='grab'; });
-canvas.addEventListener('mouseleave', ()=>{ dragging=false; canvas.style.cursor='grab'; });
-canvas.addEventListener('mousemove', e => {
-    if(!dragging) return;
-    const rect = canvas.getBoundingClientRect();
-    mask.x = e.clientX - rect.left - offsetX;
-    mask.y = e.clientY - rect.top - offsetY;
-    draw();
-});
+    draw(); return;
+  }
+  if(dragging){ mask.x=x-dragOffsetX; mask.y=y-dragOffsetY; draw();}
+}
+function endDrag(){dragging=false; resizing=false; resizeCorner=null;}
+
+canvas.addEventListener('mousedown', startDrag);
+canvas.addEventListener('mousemove', moveDrag);
+canvas.addEventListener('mouseup', endDrag);
+canvas.addEventListener('mouseleave', endDrag);
+
+canvas.addEventListener('touchstart', e=>{startDrag(e); e.preventDefault();});
+canvas.addEventListener('touchmove', e=>{moveDrag(e); e.preventDefault();});
+canvas.addEventListener('touchend', endDrag);
 
 // Reset
-resetBtn.addEventListener('click', () => {
-    mask = {x: 200, y: 150, w: 400, h: 300};
-    draw();
-});
-
-// Redessiner après changement flou ou forme
+resetBtn.addEventListener('click', ()=>{mask={x:200,y:150,w:400,h:300}; draw();});
 blurRange.addEventListener('input', draw);
 shapeSelect.addEventListener('change', draw);
-img.onload = draw;
+img.onload=draw;
 </script>
 </body>
 </html>
