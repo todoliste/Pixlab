@@ -1,203 +1,140 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Académie de Combat Pokémon - 2 Joueurs</title>
+<title>Pokémon TCG - Choix Deco</title>
 <style>
-  body {
-    font-family: 'Verdana', sans-serif;
-    background: #d0e7f9;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
-  }
-  h1 { text-align: center; margin-bottom: 10px; }
-  .selection, .arena { display: flex; justify-content: space-around; width: 100%; max-width: 900px; margin: 20px 0; }
-  .card {
-    background: #fff;
-    border-radius: 15px;
-    border: 2px solid #333;
-    padding: 15px;
-    text-align: center;
-    width: 40%;
-  }
-  .card img { width: 120px; height: 120px; object-fit: contain; }
-  select { padding: 5px; margin: 10px; }
-  button {
-    margin: 5px;
-    padding: 10px 15px;
-    cursor: pointer;
-    border-radius: 8px;
-    border: none;
-    background-color: #4CAF50;
-    color: white;
-    font-weight: bold;
-    transition: 0.2s;
-  }
-  button:hover { background-color: #45a049; }
-  .hp-bar {
-    height: 20px;
-    border-radius: 10px;
-    background: green;
-    margin: 5px 0;
-    width: 100%;
-  }
-  #battleArea {
-    width: 100%;
-    max-width: 900px;
-    height: 400px;
-    position: relative;
-    border: 3px solid #333;
-    border-radius: 15px;
-    overflow: hidden;
-    display: none;
-  }
-  #battleArea img.background {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    z-index: 0;
-  }
-  .playerArea {
-    position: absolute;
-    bottom: 20px;
-    width: 40%;
-    z-index: 1;
-  }
-  #player1Area { left: 10px; }
-  #player2Area { right: 10px; transform: scaleX(-1); }
-  .player img { width: 150px; height: 150px; }
+body{font-family:Arial;margin:0;padding:0;background:#222;color:#fff;display:flex;flex-direction:column;align-items:center;}
+h1{text-align:center;margin:10px;}
+#battleArea{display:none;width:1000px;height:600px;background-size:cover;position:relative;border:2px solid #fff;border-radius:10px;margin-top:10px;}
+.hand, .bench, .field{display:flex;flex-wrap:wrap;justify-content:center;position:absolute;}
+.hand{bottom:10px; left:50%; transform:translateX(-50%);}
+.field{top:50%; left:50%; transform:translate(-50%,-50%);}
+.bench{bottom:150px; left:50%; transform:translateX(-50%);}
+.card{width:80px;height:110px;margin:5px;border:2px solid #333;border-radius:10px;background:white;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;}
+.card img{width:70px;height:70px;object-fit:contain;}
+.hp-bar{width:70%;height:10px;border-radius:5px;background:green;position:absolute;top:5px;left:50%;transform:translateX(-50%);}
+.energy-attached{font-size:12px;margin-top:2px;color:#000;display:flex;gap:2px;}
+button{margin:5px;padding:5px 10px;cursor:pointer;}
+.attackButton{margin:2px;padding:2px 5px;cursor:pointer;background:#ff0;color:#000;border:none;border-radius:3px;}
+.effect{position:absolute;width:60px;height:60px;pointer-events:none;}
+#result{color:#fff;font-weight:bold;margin-top:10px;}
 </style>
 </head>
 <body>
 
-<h1>Académie de Combat Pokémon</h1>
+<h1>Pokémon TCG - Choix de l'arène et deck</h1>
 
-<div class="selection" id="chooseArea">
-  <div class="card">
-    <h2>Joueur 1</h2>
-    <img id="p1Img" src="" alt="Pokémon 1">
-    <select id="p1Select"></select>
-  </div>
-  <div class="card">
-    <h2>Joueur 2</h2>
-    <img id="p2Img" src="" alt="Pokémon 2">
-    <select id="p2Select"></select>
-  </div>
-</div>
-
-<div class="card">
-  <h2>Choisis le décor</h2>
-  <select id="bgSelect">
-    <option value="https://i.imgur.com/4NJvX9P.jpg">Arène herbe</option>
-    <option value="https://i.imgur.com/yG9f0F7.jpg">Arène volcan</option>
-    <option value="https://i.imgur.com/6sU9YcC.jpg">Arène glace</option>
-  </select>
-  <button onclick="startBattle()">Commencer le combat</button>
+<div>
+<label>Choisir l'arène :</label>
+<select id="arenaSelect">
+<option value="eau">Eau</option>
+<option value="feu">Feu</option>
+<option value="plante">Plante</option>
+<option value="electrik">Électrik</option>
+</select>
+<button onclick="startGame()">Lancer le jeu</button>
 </div>
 
 <div id="battleArea">
-  <img id="battleBg" class="background">
-  <div class="playerArea" id="player1Area">
-    <div class="player">
-      <h3 id="p1Name"></h3>
-      <div class="hp-bar" id="p1HP"></div>
-      <div id="p1Moves"></div>
-    </div>
-  </div>
-  <div class="playerArea" id="player2Area">
-    <div class="player">
-      <h3 id="p2Name"></h3>
-      <div class="hp-bar" id="p2HP"></div>
-      <div id="p2Moves"></div>
-    </div>
-  </div>
+  <div id="hand1" class="hand"></div>
+  <div id="hand2" class="hand" style="top:auto;bottom:470px;"></div>
+  <div id="active1" class="field"></div>
+  <div id="active2" class="field" style="top:100px;"></div>
+  <div id="bench1" class="bench"></div>
+  <div id="bench2" class="bench" style="top:50px;"></div>
+  <p id="result"></p>
 </div>
 
-<div id="result" style="margin-top:20px; font-size:1.2em;"></div>
+<button onclick="nextTurn()">Fin du tour</button>
 
 <script>
-// Liste Pokémon avec images
-const pokemons = [
-  {name:"Pikachu", hp:100, img:"https://img.pokemondb.net/sprites/home/normal/pikachu.png",
-   moves:[{name:"Éclair", dmg:20},{name:"Vive-Attaque", dmg:15}]},
-  {name:"Bulbizarre", hp:120, img:"https://img.pokemondb.net/sprites/home/normal/bulbasaur.png",
-   moves:[{name:"Fouet Lianes", dmg:15},{name:"Charge", dmg:10}]},
-  {name:"Salamèche", hp:100, img:"https://img.pokemondb.net/sprites/home/normal/charmander.png",
-   moves:[{name:"Flammèche", dmg:20},{name:"Griffe", dmg:15}]},
-  {name:"Carapuce", hp:110, img:"https://img.pokemondb.net/sprites/home/normal/squirtle.png",
-   moves:[{name:"Pistolet à O", dmg:15},{name:"Morsure", dmg:15}]}
-];
+// Exemple de cartes par type
+const pokemonByType = {
+  eau:[
+    {name:"Carapuce",hp:60,img:"images/carapuce.png"},
+    {name:"Tiplouf",hp:60,img:"images/tiplouf.png"}
+  ],
+  feu:[
+    {name:"Salamèche",hp:60,img:"images/salamèche.png"},
+    {name:"Héricendre",hp:60,img:"images/hericendre.png"}
+  ],
+  plante:[
+    {name:"Bulbizarre",hp:70,img:"images/bulbizarre.png"},
+    {name:"Vipélierre",hp:70,img:"images/vipelierre.png"}
+  ],
+  electrik:[
+    {name:"Pikachu",hp:60,img:"images/pikachu.png"},
+    {name:"Évoli Électrik",hp:60,img:"images/evoli_electrik.png"}
+  ]
+};
 
-let player1={}, player2={}, turn=1;
+const energyByType = {
+  eau:"energie_eau.png",
+  feu:"energie_feu.png",
+  plante:"energie_plante.png",
+  electrik:"energie_electrik.png"
+};
 
-const p1Select = document.getElementById('p1Select');
-const p2Select = document.getElementById('p2Select');
-const p1Img = document.getElementById('p1Img');
-const p2Img = document.getElementById('p2Img');
+let player1Deck=[],player2Deck=[],hand1=[],hand2=[],active1=null,active2=null,bench1=[],bench2=[],turn=1;
+const battleArea=document.getElementById("battleArea");
+const handDiv1=document.getElementById("hand1");
+const handDiv2=document.getElementById("hand2");
+const activeDiv1=document.getElementById("active1");
+const activeDiv2=document.getElementById("active2");
+const benchDiv1=document.getElementById("bench1");
+const benchDiv2=document.getElementById("bench2");
+const resultP=document.getElementById("result");
 
-// remplir sélections
-pokemons.forEach((p,i)=>{
-  let o1=document.createElement('option'); o1.value=i; o1.text=p.name; p1Select.add(o1);
-  let o2=document.createElement('option'); o2.value=i; o2.text=p.name; p2Select.add(o2);
-});
-
-// prévisualisation images
-p1Select.addEventListener('change', ()=>{p1Img.src=pokemons[p1Select.value].img;});
-p2Select.addEventListener('change', ()=>{p2Img.src=pokemons[p2Select.value].img;});
-p1Img.src=pokemons[0].img; p2Img.src=pokemons[0].img;
-
-function startBattle(){
-  player1={...pokemons[p1Select.value]};
-  player2={...pokemons[p2Select.value]};
-  
-  document.getElementById('chooseArea').style.display='none';
-  document.getElementById('battleArea').style.display='block';
-  document.getElementById('battleBg').src=document.getElementById('bgSelect').value;
-  
-  updateUI();
+// Lancer le jeu
+function startGame(){
+  const type=document.getElementById("arenaSelect").value;
+  battleArea.style.backgroundImage=`url('images/${type}_arena.png')`;
+  generateDecks(type);
+  hand1=player1Deck.splice(0,7);
+  hand2=player2Deck.splice(0,7);
+  battleArea.style.display="block";
+  renderAll();
 }
 
-function updateUI(){
-  document.getElementById('p1Name').innerText=player1.name+" (J1)";
-  document.getElementById('p2Name').innerText=player2.name+" (J2)";
-  
-  document.getElementById('p1HP').style.width=player1.hp+"%";
-  document.getElementById('p2HP').style.width=player2.hp+"%";
-  
-  const p1MovesDiv=document.getElementById('p1Moves');
-  const p2MovesDiv=document.getElementById('p2Moves');
-  p1MovesDiv.innerHTML=''; p2MovesDiv.innerHTML='';
-  
-  if(turn===1){
-    player1.moves.forEach(m=>{
-      const btn=document.createElement('button'); btn.innerText=m.name;
-      btn.onclick=()=>attack(player1,player2,m);
-      p1MovesDiv.appendChild(btn);
-    });
-  } else {
-    player2.moves.forEach(m=>{
-      const btn=document.createElement('button'); btn.innerText=m.name;
-      btn.onclick=()=>attack(player2,player1,m);
-      p2MovesDiv.appendChild(btn);
-    });
+// Générer decks 60 cartes
+function generateDecks(type){
+  player1Deck=[]; player2Deck=[];
+  for(let i=0;i<30;i++){
+    const poke=JSON.parse(JSON.stringify(pokemonByType[type][i%pokemonByType[type].length]));
+    player1Deck.push(poke);
+    player2Deck.push(JSON.parse(JSON.stringify(poke)));
   }
+  for(let i=0;i<30;i++){
+    player1Deck.push({name:type+" Énergie",type:"Énergie",img:"images/"+energyByType[type]});
+    player2Deck.push({name:type+" Énergie",type:"Énergie",img:"images/"+energyByType[type]});
+  }
+  shuffle(player1Deck); shuffle(player2Deck);
 }
 
-function attack(attacker,defender,move){
-  defender.hp-=move.dmg; if(defender.hp<0) defender.hp=0;
-  document.getElementById('result').innerText=`${attacker.name} utilise ${move.name} !`;
-  
-  if(defender.hp<=0){
-    document.getElementById('result').innerText=`${attacker.name} gagne le combat !`;
-    document.getElementById('p1Moves').innerHTML=''; document.getElementById('p2Moves').innerHTML='';
-    return;
-  }
-  turn = turn===1?2:1;
-  updateUI();
+function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
+
+// Affichage
+function renderAll(){renderHand(); renderActive(); renderBench();}
+function renderHand(){handDiv1.innerHTML="";handDiv2.innerHTML="";hand1.forEach((c,i)=>handDiv1.appendChild(createCard(c,1,i)));hand2.forEach((c,i)=>handDiv2.appendChild(createCard(c,2,i)));}
+function renderActive(){activeDiv1.innerHTML="";activeDiv2.innerHTML="";if(active1)activeDiv1.appendChild(createCard(active1,1,true));if(active2)activeDiv2.appendChild(createCard(active2,2,true));}
+function renderBench(){benchDiv1.innerHTML="";benchDiv2.innerHTML="";bench1.forEach(c=>benchDiv1.appendChild(createCard(c,1)));bench2.forEach(c=>benchDiv2.appendChild(createCard(c,2)));}
+
+function createCard(card,player,isActive=false){const div=document.createElement("div");div.className="card";div.innerHTML=`<img src="${card.img}" alt="${card.name}"><p>${card.name}</p>`;div.draggable=true;div.ondragstart=(e)=>{e.dataTransfer.setData("cardIndex",0); e.dataTransfer.setData("player",player);};div.ondragover=(e)=>e.preventDefault();div.ondrop=(e)=>{playCard(player,0);};return div;}
+
+function playCard(player,index){
+  const hand=player===1?hand1:hand2;
+  const active=player===1?active1:active2;
+  const bench=player===1?bench1:bench2;
+  const card=hand[index];
+  if(card.type==="Pokémon"){if(!active){if(player===1) active1=card; else active2=card;}else if(bench.length<5) bench.push(card);} 
+  else if(card.type==="Énergie"){if(active){if(!active.energy) active.energy=[];active.energy.push(card.type);}else return alert("Pas de Pokémon actif !");}
+  hand.splice(index,1); renderAll();
 }
+
+function nextTurn(){turn=turn===1?2:1;if(turn===1&&player1Deck.length>0) hand1.push(player1Deck.shift());if(turn===2&&player2Deck.length>0) hand2.push(player2Deck.shift());renderAll();}
 </script>
+
 </body>
 </html>
