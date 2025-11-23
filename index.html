@@ -2,465 +2,129 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CapCut Web UI</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Flou avec masque</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background-color: #111;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        canvas {
+            border: 2px solid #fff;
+            cursor: crosshair;
+        }
+        #controls {
+            margin: 10px;
+        }
+        button, input {
+            margin: 5px;
+            padding: 5px 10px;
+            font-size: 16px;
+        }
+    </style>
 </head>
-
 <body>
-
-    <!-- HEADER -->
-    <header class="topbar">
-        <div class="logo">PixLab</div>
-        <div class="actions">
-            <button class="btn">Nouveau projet</button>
-            <button class="btn primary">Exporter</button>
-        </div>
-    </header>
-
-    <!-- CONTAINER PRINCIPAL -->
-    <div class="editor">
-
-        <!-- PANNEAU GAUCHE -->
-        <aside class="sidebar-left">
-            <h3>Médias</h3>
-            <div class="media-box">Importez des images/vidéos</div>
-        </aside>
-
-        <!-- ZONE CENTRALE -->
-        <main class="preview-area">
-            <div class="preview">
-                Prévisualisation vidéo / photo
-            </div>
-        </main>
-
-        <!-- PANNEAU DROIT -->
-        <aside class="sidebar-right">
-            <h3>Propriétés</h3>
-            <div class="panel-box">
-                Options d’édition
-            </div>
-        </aside>
-
+    <h1>Flou avec masque</h1>
+    <input type="file" id="upload" accept="image/*">
+    <div id="controls">
+        <button id="clear">Effacer le masque</button>
+        <button id="applyBlur">Appliquer le flou</button>
+        <label>Taille du pinceau : <input type="range" id="brushSize" min="5" max="100" value="30"></label>
     </div>
+    <canvas id="canvas" width="800" height="600"></canvas>
 
-    <!-- TIMELINE -->
-    <footer class="timeline">
-        <div class="timeline-content">
-            Timeline ici (clips / audio / texte)
-        </div>
-    </footer>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const upload = document.getElementById('upload');
+        const clearBtn = document.getElementById('clear');
+        const applyBlurBtn = document.getElementById('applyBlur');
+        const brushSizeInput = document.getElementById('brushSize');
 
+        let img = new Image();
+        let drawing = false;
+        let mask = ctx.createImageData(canvas.width, canvas.height);
+
+        // Charger l'image
+        upload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        img.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            mask = ctx.createImageData(canvas.width, canvas.height); // Reset mask
+        };
+
+        // Dessiner le masque
+        canvas.addEventListener('mousedown', () => drawing = true);
+        canvas.addEventListener('mouseup', () => drawing = false);
+        canvas.addEventListener('mouseleave', () => drawing = false);
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!drawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const size = parseInt(brushSizeInput.value);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.beginPath();
+            ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mettre à jour le masque
+            const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+            mask.data.set(imgData.data);
+        });
+
+        // Effacer le masque
+        clearBtn.addEventListener('click', () => {
+            if (!img.src) return;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            mask = ctx.createImageData(canvas.width, canvas.height);
+        });
+
+        // Appliquer le flou sur le masque
+        applyBlurBtn.addEventListener('click', () => {
+            if (!img.src) return;
+            // Créer un canvas temporaire
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            // Appliquer le flou
+            tempCtx.filter = 'blur(10px)';
+            tempCtx.drawImage(canvas, 0, 0); // Dessiner le masque dessus
+            
+            // Combiner avec l'image originale
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            // Masquer uniquement les zones peintes
+            const original = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const blurred = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < mask.data.length; i += 4) {
+                const alpha = mask.data[i] / 255; // Zone peinte
+                original.data[i] = original.data[i] * (1 - alpha) + blurred.data[i] * alpha;
+                original.data[i+1] = original.data[i+1] * (1 - alpha) + blurred.data[i+1] * alpha;
+                original.data[i+2] = original.data[i+2] * (1 - alpha) + blurred.data[i+2] * alpha;
+            }
+            ctx.putImageData(original, 0, 0);
+        });
+    </script>
 </body>
-</html>/* ===== RESET ===== */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Arial', sans-serif;
-}
-
-body {
-    background-color: #121212;
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
-
-/* ===== HEADER ===== */
-.topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 20px;
-    background-color: #1e1e1e;
-    border-bottom: 1px solid #333;
-}
-
-.topbar .logo {
-    font-size: 1.5em;
-    font-weight: bold;
-    color: #8c9eff;
-}
-
-.topbar .actions {
-    display: flex;
-    gap: 10px;
-}
-
-.btn {
-    padding: 6px 12px;
-    background-color: #333;
-    border: none;
-    color: #fff;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.btn:hover {
-    background-color: #555;
-}
-
-.btn.primary {
-    background-color: #8c9eff;
-    color: #000;
-}
-
-.btn.primary:hover {
-    background-color: #aabfff;
-}
-
-/* ===== EDITOR CONTAINER ===== */
-.editor {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-}
-
-/* ===== PANNEAU GAUCHE ===== */
-.sidebar-left {
-    width: 200px;
-    background-color: #1e1e1e;
-    border-right: 1px solid #333;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.sidebar-left h3 {
-    font-size: 1.1em;
-    margin-bottom: 5px;
-    color: #8c9eff;
-}
-
-.media-box {
-    flex: 1;
-    background-color: #2a2a2a;
-    border: 1px dashed #555;
-    border-radius: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 10px;
-    cursor: pointer;
-    font-size: 0.9em;
-}
-
-/* ===== ZONE CENTRALE ===== */
-.preview-area {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #181818;
-    position: relative;
-}
-
-.preview {
-    width: 90%;
-    height: 70%;
-    background-color: #252525;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #444;
-    border-radius: 8px;
-    text-align: center;
-    font-size: 1.2em;
-}
-
-/* ===== PANNEAU DROIT ===== */
-.sidebar-right {
-    width: 220px;
-    background-color: #1e1e1e;
-    border-left: 1px solid #333;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.sidebar-right h3 {
-    font-size: 1.1em;
-    margin-bottom: 5px;
-    color: #8c9eff;
-}
-
-.panel-box {
-    flex: 1;
-    background-color: #2a2a2a;
-    border-radius: 5px;
-    padding: 10px;
-}
-
-/* ===== TIMELINE ===== */
-.timeline {
-    height: 120px;
-    background-color: #1e1e1e;
-    border-top: 1px solid #333;
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    overflow-x: auto;
-}
-
-.timeline-content {
-    min-width: 800px;
-    background-color: #252525;
-    height: 100%;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1em;
-    color: #aaa;
-}
-
-/* ===== RESPONSIVE MOBILE ===== */
-@media (max-width: 768px) {
-    .editor {
-        flex-direction: column;
-    }
-
-    .sidebar-left,
-    .sidebar-right {
-        width: 100%;
-        height: auto;
-        border: none;
-    }
-
-    .preview {
-        width: 95%;
-        height: 300px;
-        margin: 10px 0;
-    }
-
-    .timeline {
-        height: 100px;
-    }
-
-    .timeline-content {
-        min-width: 100%;
-    }
-
-    .topbar {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
-    .topbar .actions {
-        width: 100%;
-        justify-content: space-between;
-    }
-}<!-- PANNEAU GAUCHE — MÉDIAS -->
-<aside class="sidebar-left">
-    <h3>Médias</h3>
-    <div class="media-box">Importez des images/vidéos</div>
-    <div class="media-thumbnails">
-        <div class="thumb">Image 1</div>
-        <div class="thumb">Vidéo 1</div>
-        <div class="thumb">Image 2</div>
-        <div class="thumb">Vidéo 2</div>
-    </div>
-</aside>
-
-<!-- PANNEAU DROIT — PROPRIÉTÉS -->
-<aside class="sidebar-right">
-    <h3>Propriétés</h3>
-    <div class="panel-box">
-        <div class="property">
-            <label>Durée :</label>
-            <span>5s</span>
-        </div>
-        <div class="property">
-            <label>Filtre :</label>
-            <span>Vif</span>
-        </div>
-        <div class="property">
-            <label>Animation :</label>
-            <span>Zoom In</span>
-        </div>
-    </div>
-</aside>
-
-<!-- TIMELINE -->
-<footer class="timeline">
-    <div class="timeline-content">
-        <div class="clip photo">Photo 1</div>
-        <div class="clip video">Vidéo 1</div>
-        <div class="clip text">Texte 1</div>
-        <div class="clip sticker">Sticker 1</div>
-        <div class="clip audio">Audio 1</div>
-        <div class="clip photo">Photo 2</div>
-    </div>
-</footer>/* ===== THUMBNAILS MÉDIAS ===== */
-.media-thumbnails {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.media-thumbnails .thumb {
-    background-color: #2a2a2a;
-    padding: 8px;
-    border-radius: 5px;
-    text-align: center;
-    cursor: pointer;
-    border: 1px solid #444;
-    transition: 0.2s;
-}
-
-.media-thumbnails .thumb:hover {
-    background-color: #3a3a3a;
-}
-
-/* ===== TIMELINE ELEMENTS ===== */
-.clip {
-    min-width: 120px;
-    height: 60px;
-    margin: 5px;
-    border-radius: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.9em;
-    color: #fff;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.clip.photo {
-    background-color: #4caf50;
-}
-
-.clip.video {
-    background-color: #2196f3;
-}
-
-.clip.text {
-    background-color: #ff9800;
-}
-
-.clip.sticker {
-    background-color: #e91e63;
-}
-
-.clip.audio {
-    background-color: #9c27b0;
-}
-
-.clip:hover {
-    opacity: 0.8;
-}/* ===== BOUTONS MICRO-INTERACTIONS ===== */
-.btn {
-    position: relative;
-}
-
-.btn::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    border-radius: 5px;
-    box-shadow: 0 0 0 rgba(0,0,0,0);
-    transition: 0.3s;
-}
-
-.btn:hover::after {
-    box-shadow: 0 0 8px rgba(140,158,255,0.7);
-}
-
-/* ===== TOOLTIP SIMPLE ===== */
-[data-tooltip] {
-    position: relative;
-    cursor: pointer;
-}
-
-[data-tooltip]::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 120%;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #333;
-    color: #fff;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.75em;
-    opacity: 0;
-    white-space: nowrap;
-    pointer-events: none;
-    transition: 0.3s;
-    z-index: 10;
-}
-
-[data-tooltip]:hover::after {
-    opacity: 1;
-}
-
-/* ===== FEEDBACK TIMELINE ===== */
-.clip:active {
-    transform: scale(0.95);
-    opacity: 0.9;
-}
-
-/* ===== ANIMATIONS MICRO-INTERACTIONS ===== */
-.media-box:hover,
-.panel-box:hover {
-    box-shadow: 0 0 10px rgba(140,158,255,0.5);
-}
-
-.preview {
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-
-.preview:hover {
-    transform: scale(1.01);
-    box-shadow: 0 0 20px rgba(140,158,255,0.4);
-}
-
-/* ===== STYLING DES PROPRIÉTÉS ===== */
-.property {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 0;
-    border-bottom: 1px solid #333;
-    font-size: 0.9em;
-}
-
-/* ===== TIMELINE SCROLLBAR CUSTOM ===== */
-.timeline::-webkit-scrollbar {
-    height: 8px;
-}
-
-.timeline::-webkit-scrollbar-track {
-    background: #1e1e1e;
-}
-
-.timeline::-webkit-scrollbar-thumb {
-    background-color: #8c9eff;
-    border-radius: 4px;
-}
-
-.timeline::-webkit-scrollbar-thumb:hover {
-    background-color: #aabfff;
-}
-
-/* ===== RESPONSIVE CLIP HEIGHT MOBILE ===== */
-@media (max-width: 768px) {
-    .clip {
-        height: 50px;
-        font-size: 0.8em;
-    }
-
-    .media-thumbnails .thumb {
-        padding: 6px;
-        font-size: 0.8em;
-    }
-}
+</html>
