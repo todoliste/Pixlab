@@ -1,202 +1,159 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Brainrot Sahur avec Pause</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Académie de Combat Pokémon - 2 Joueurs</title>
 <style>
-body {
-  margin:0;
-  font-family:sans-serif;
-  background:#121212;
-  color:#fff;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  padding:15px;
-}
-h1 {margin-bottom:10px; font-size:20px; text-align:center;}
-#canvasContainer {
-  position:relative;
-  width:100%;
-  max-width:400px;
-  border-radius:12px;
-  overflow:hidden;
-  background:#000;
-  touch-action:none;
-}
-canvas {
-  width:100%;
-  display:block;
-  cursor:grab;
-}
-#controls {
-  margin-top:10px;
-  width:100%;
-  max-width:400px;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-.control-row {
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  justify-content:center;
-}
-input, select, button {
-  padding:10px;
-  font-size:14px;
-  border-radius:8px;
-  border:none;
-}
-button {cursor:pointer; background:#0f0; color:#000; font-weight:bold; flex:1;}
-input[type="range"] {flex:1;}
-select {flex:1;}
+  body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  h1 { text-align: center; }
+  .arena {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    max-width: 800px;
+    margin: 20px 0;
+  }
+  .player {
+    background: #fff;
+    border: 2px solid #333;
+    border-radius: 10px;
+    padding: 10px;
+    width: 45%;
+    text-align: center;
+  }
+  .hp-bar {
+    height: 20px;
+    background: green;
+    margin: 5px 0;
+  }
+  button {
+    margin: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
-<h1>Brainrot Sahur</h1>
-<div id="canvasContainer">
-  <canvas id="canvas"></canvas>
+<h1>Académie de Combat Pokémon</h1>
+
+<div id="chooseArea">
+  <h2>Choisissez vos Pokémon</h2>
+  <div>
+    Joueur 1 : 
+    <select id="p1Select"></select>
+  </div>
+  <div>
+    Joueur 2 : 
+    <select id="p2Select"></select>
+  </div>
+  <button onclick="startBattle()">Commencer le combat</button>
 </div>
-<div id="controls">
-  <div class="control-row">
-    <select id="shape">
-      <option value="rect">Rectangle</option>
-      <option value="circle">Cercle</option>
-    </select>
-    <input type="range" id="blurRange" min="0" max="30" value="10">
+
+<div class="arena" id="battleArea" style="display:none;">
+  <div class="player" id="player1">
+    <h2 id="p1Name"></h2>
+    <div class="hp-bar" id="p1HP"></div>
+    <div id="p1Moves"></div>
   </div>
-  <div class="control-row">
-    <button id="increase">Agrandir</button>
-    <button id="decrease">Réduire</button>
-  </div>
-  <div class="control-row">
-    <button id="reset">Réinitialiser</button>
-    <button id="toggleBrainrot">Pause / Play Brainrot</button>
-    <button id="export">Exporter</button>
+  <div class="player" id="player2">
+    <h2 id="p2Name"></h2>
+    <div class="hp-bar" id="p2HP"></div>
+    <div id="p2Moves"></div>
   </div>
 </div>
+
+<div id="result" style="margin-top:20px; font-size:1.2em;"></div>
 
 <script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+// Liste de Pokémon simplifiés
+const pokemons = [
+  {name: "Pikachu", hp: 100, moves: [{name:"Éclair", dmg:20}, {name:"Vive-Attaque", dmg:15}]},
+  {name: "Bulbizarre", hp: 120, moves: [{name:"Fouet Lianes", dmg:15}, {name:"Charge", dmg:10}]},
+  {name: "Salamèche", hp: 100, moves: [{name:"Flammèche", dmg:20}, {name:"Griffe", dmg:15}]},
+  {name: "Carapuce", hp: 110, moves: [{name:"Pistolet à O", dmg:15}, {name:"Morsure", dmg:15}]}
+];
 
-const shapeSelect = document.getElementById('shape');
-const blurRange = document.getElementById('blurRange');
-const increaseBtn = document.getElementById('increase');
-const decreaseBtn = document.getElementById('decrease');
-const resetBtn = document.getElementById('reset');
-const toggleBtn = document.getElementById('toggleBrainrot');
-const exportBtn = document.getElementById('export');
+let player1 = {};
+let player2 = {};
+let turn = 1;
 
-let img = new Image();
-img.crossOrigin="anonymous";
-img.src="https://static.wikia.nocookie.net/character-stats-and-profiles/images/5/52/Sahur2.webp/revision/latest?cb=20250510085254";
+// Remplir les sélections
+const p1Select = document.getElementById('p1Select');
+const p2Select = document.getElementById('p2Select');
 
-let imgScale=1, imgX=0, imgY=0;
-let mask={x:50,y:50,w:200,h:200};
-let dragging=false, dragOffsetX, dragOffsetY;
-let brainrotActive = true;
+pokemons.forEach((p, i) => {
+  let option1 = document.createElement('option');
+  option1.value = i; option1.text = p.name;
+  p1Select.add(option1);
 
-img.onload = () => {
-  const maxWidth = 400;
-  const maxHeight = 400;
-  let scale = Math.min(maxWidth/img.width, maxHeight/img.height,1);
-  canvas.width = img.width * scale;
-  canvas.height = img.height * scale;
-  imgScale = scale;
-  requestAnimationFrame(draw);
-};
-
-// Drag & Drop masque
-function getXY(e){
-  const rect=canvas.getBoundingClientRect();
-  if(e.touches) return {x:e.touches[0].clientX-rect.left, y:e.touches[0].clientY-rect.top};
-  return {x:e.clientX-rect.left, y:e.clientY-rect.top};
-}
-function startDrag(e){
-  const {x,y}=getXY(e);
-  if(shapeSelect.value==='rect' && x>mask.x && x<mask.x+mask.w && y>mask.y && y<mask.y+mask.h){
-    dragging=true; dragOffsetX=x-mask.x; dragOffsetY=y-mask.y;
-  } else if(shapeSelect.value==='circle'){
-    const cx=mask.x+mask.w/2, cy=mask.y+mask.h/2;
-    const r=Math.min(mask.w,mask.h)/2;
-    if(Math.hypot(x-cx,y-cy)<=r){dragging=true; dragOffsetX=x-mask.x; dragOffsetY=y-mask.y;}
-  }
-}
-function moveDrag(e){
-  if(!dragging) return;
-  const {x,y}=getXY(e);
-  mask.x=x-dragOffsetX;
-  mask.y=y-dragOffsetY;
-}
-function endDrag(){dragging=false;}
-canvas.addEventListener('mousedown',startDrag);
-canvas.addEventListener('mousemove',moveDrag);
-canvas.addEventListener('mouseup',endDrag);
-canvas.addEventListener('mouseleave',endDrag);
-canvas.addEventListener('touchstart',e=>{startDrag(e); e.preventDefault();});
-canvas.addEventListener('touchmove',e=>{moveDrag(e); e.preventDefault();});
-canvas.addEventListener('touchend',endDrag);
-
-// Boutons
-increaseBtn.addEventListener('click',()=>{mask.w+=20;mask.h+=20;});
-decreaseBtn.addEventListener('click',()=>{mask.w=Math.max(20,mask.w-20);mask.h=Math.max(20,mask.h-20);});
-resetBtn.addEventListener('click',()=>{mask={x:50,y:50,w:200,h:200};});
-toggleBtn.addEventListener('click',()=>{brainrotActive=!brainrotActive;});
-exportBtn.addEventListener('click',()=>{
-  const link=document.createElement('a');
-  link.download='brainrot_sahur.png';
-  link.href=canvas.toDataURL('image/png');
-  link.click();
+  let option2 = document.createElement('option');
+  option2.value = i; option2.text = p.name;
+  p2Select.add(option2);
 });
 
-// Draw loop
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+function startBattle() {
+  player1 = {...pokemons[p1Select.value]};
+  player2 = {...pokemons[p2Select.value]};
+  
+  document.getElementById('chooseArea').style.display = 'none';
+  document.getElementById('battleArea').style.display = 'flex';
+  
+  updateUI();
+}
 
-  ctx.save();
-  if(brainrotActive){
-    // Tremblement + décalage glitch
-    const shakeX=(Math.random()-0.5)*15;
-    const shakeY=(Math.random()-0.5)*15;
-    ctx.translate(shakeX,shakeY);
+function updateUI() {
+  document.getElementById('p1Name').innerText = player1.name + " (Joueur 1)";
+  document.getElementById('p2Name').innerText = player2.name + " (Joueur 2)";
+  
+  document.getElementById('p1HP').style.width = player1.hp + "%";
+  document.getElementById('p2HP').style.width = player2.hp + "%";
+  
+  // Afficher les boutons d'attaque selon le tour
+  const p1MovesDiv = document.getElementById('p1Moves');
+  const p2MovesDiv = document.getElementById('p2Moves');
+  p1MovesDiv.innerHTML = '';
+  p2MovesDiv.innerHTML = '';
 
-    // Décalage horizontal aléatoire pour glitch
-    const glitchOffset=Math.random()*15-7;
-    ctx.drawImage(img,imgX+glitchOffset,imgY,img.width*imgScale,img.height*imgScale);
-
-    // Brainrot couleur
-    const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
-    const data=imageData.data;
-    for(let i=0;i<data.length;i+=4){
-      let r=data[i], g=data[i+1], b=data[i+2];
-      data[i]=Math.min(255,r+Math.random()*100);
-      data[i+1]=Math.min(255,b+Math.random()*100);
-      data[i+2]=Math.min(255,g+Math.random()*100);
-    }
-    ctx.putImageData(imageData,0,0);
+  if(turn === 1) {
+    player1.moves.forEach((move, i) => {
+      const btn = document.createElement('button');
+      btn.innerText = move.name;
+      btn.onclick = () => attack(player1, player2, move);
+      p1MovesDiv.appendChild(btn);
+    });
   } else {
-    ctx.drawImage(img,imgX,imgY,img.width*imgScale,img.height*imgScale);
+    player2.moves.forEach((move, i) => {
+      const btn = document.createElement('button');
+      btn.innerText = move.name;
+      btn.onclick = () => attack(player2, player1, move);
+      p2MovesDiv.appendChild(btn);
+    });
   }
-  ctx.restore();
+}
 
-  // Masque flou
-  ctx.save();
-  ctx.filter=`blur(${blurRange.value}px)`;
-  ctx.beginPath();
-  if(shapeSelect.value==='rect') ctx.rect(mask.x,mask.y,mask.w,mask.h);
-  else ctx.arc(mask.x+mask.w/2,mask.y+mask.h/2,Math.min(mask.w,mask.h)/2,0,Math.PI*2);
-  ctx.clip();
-  ctx.drawImage(img,imgX,imgY,img.width*imgScale,img.height*imgScale);
-  ctx.filter=`blur(${blurRange.value/2}px)`;
-  ctx.drawImage(img,imgX,imgY,img.width*imgScale,img.height*imgScale);
-  ctx.restore();
+function attack(attacker, defender, move) {
+  defender.hp -= move.dmg;
+  if(defender.hp < 0) defender.hp = 0;
+  document.getElementById('result').innerText = `${attacker.name} utilise ${move.name} !`;
+  
+  // Vérifier victoire
+  if(defender.hp <= 0) {
+    document.getElementById('result').innerText = `${attacker.name} gagne le combat !`;
+    document.getElementById('p1Moves').innerHTML = '';
+    document.getElementById('p2Moves').innerHTML = '';
+    return;
+  }
 
-  requestAnimationFrame(draw);
+  // Changer de tour
+  turn = turn === 1 ? 2 : 1;
+  updateUI();
 }
 </script>
 </body>
