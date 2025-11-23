@@ -5,154 +5,197 @@
 <title>Académie de Combat Pokémon - 2 Joueurs</title>
 <style>
   body {
-    font-family: Arial, sans-serif;
-    background: #f2f2f2;
+    font-family: 'Verdana', sans-serif;
+    background: #d0e7f9;
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 20px;
   }
-  h1 { text-align: center; }
-  .arena {
-    display: flex;
-    justify-content: space-around;
-    width: 100%;
-    max-width: 800px;
-    margin: 20px 0;
-  }
-  .player {
+  h1 { text-align: center; margin-bottom: 10px; }
+  .selection, .arena { display: flex; justify-content: space-around; width: 100%; max-width: 900px; margin: 20px 0; }
+  .card {
     background: #fff;
+    border-radius: 15px;
     border: 2px solid #333;
-    border-radius: 10px;
-    padding: 10px;
-    width: 45%;
+    padding: 15px;
     text-align: center;
+    width: 40%;
   }
-  .hp-bar {
-    height: 20px;
-    background: green;
-    margin: 5px 0;
-  }
+  .card img { width: 120px; height: 120px; object-fit: contain; }
+  select { padding: 5px; margin: 10px; }
   button {
     margin: 5px;
     padding: 10px 15px;
     cursor: pointer;
+    border-radius: 8px;
+    border: none;
+    background-color: #4CAF50;
+    color: white;
+    font-weight: bold;
+    transition: 0.2s;
   }
+  button:hover { background-color: #45a049; }
+  .hp-bar {
+    height: 20px;
+    border-radius: 10px;
+    background: green;
+    margin: 5px 0;
+    width: 100%;
+  }
+  #battleArea {
+    width: 100%;
+    max-width: 900px;
+    height: 400px;
+    position: relative;
+    border: 3px solid #333;
+    border-radius: 15px;
+    overflow: hidden;
+    display: none;
+  }
+  #battleArea img.background {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+  }
+  .playerArea {
+    position: absolute;
+    bottom: 20px;
+    width: 40%;
+    z-index: 1;
+  }
+  #player1Area { left: 10px; }
+  #player2Area { right: 10px; transform: scaleX(-1); }
+  .player img { width: 150px; height: 150px; }
 </style>
 </head>
 <body>
+
 <h1>Académie de Combat Pokémon</h1>
 
-<div id="chooseArea">
-  <h2>Choisissez vos Pokémon</h2>
-  <div>
-    Joueur 1 : 
+<div class="selection" id="chooseArea">
+  <div class="card">
+    <h2>Joueur 1</h2>
+    <img id="p1Img" src="" alt="Pokémon 1">
     <select id="p1Select"></select>
   </div>
-  <div>
-    Joueur 2 : 
+  <div class="card">
+    <h2>Joueur 2</h2>
+    <img id="p2Img" src="" alt="Pokémon 2">
     <select id="p2Select"></select>
   </div>
+</div>
+
+<div class="card">
+  <h2>Choisis le décor</h2>
+  <select id="bgSelect">
+    <option value="https://i.imgur.com/4NJvX9P.jpg">Arène herbe</option>
+    <option value="https://i.imgur.com/yG9f0F7.jpg">Arène volcan</option>
+    <option value="https://i.imgur.com/6sU9YcC.jpg">Arène glace</option>
+  </select>
   <button onclick="startBattle()">Commencer le combat</button>
 </div>
 
-<div class="arena" id="battleArea" style="display:none;">
-  <div class="player" id="player1">
-    <h2 id="p1Name"></h2>
-    <div class="hp-bar" id="p1HP"></div>
-    <div id="p1Moves"></div>
+<div id="battleArea">
+  <img id="battleBg" class="background">
+  <div class="playerArea" id="player1Area">
+    <div class="player">
+      <h3 id="p1Name"></h3>
+      <div class="hp-bar" id="p1HP"></div>
+      <div id="p1Moves"></div>
+    </div>
   </div>
-  <div class="player" id="player2">
-    <h2 id="p2Name"></h2>
-    <div class="hp-bar" id="p2HP"></div>
-    <div id="p2Moves"></div>
+  <div class="playerArea" id="player2Area">
+    <div class="player">
+      <h3 id="p2Name"></h3>
+      <div class="hp-bar" id="p2HP"></div>
+      <div id="p2Moves"></div>
+    </div>
   </div>
 </div>
 
 <div id="result" style="margin-top:20px; font-size:1.2em;"></div>
 
 <script>
-// Liste de Pokémon simplifiés
+// Liste Pokémon avec images
 const pokemons = [
-  {name: "Pikachu", hp: 100, moves: [{name:"Éclair", dmg:20}, {name:"Vive-Attaque", dmg:15}]},
-  {name: "Bulbizarre", hp: 120, moves: [{name:"Fouet Lianes", dmg:15}, {name:"Charge", dmg:10}]},
-  {name: "Salamèche", hp: 100, moves: [{name:"Flammèche", dmg:20}, {name:"Griffe", dmg:15}]},
-  {name: "Carapuce", hp: 110, moves: [{name:"Pistolet à O", dmg:15}, {name:"Morsure", dmg:15}]}
+  {name:"Pikachu", hp:100, img:"https://img.pokemondb.net/sprites/home/normal/pikachu.png",
+   moves:[{name:"Éclair", dmg:20},{name:"Vive-Attaque", dmg:15}]},
+  {name:"Bulbizarre", hp:120, img:"https://img.pokemondb.net/sprites/home/normal/bulbasaur.png",
+   moves:[{name:"Fouet Lianes", dmg:15},{name:"Charge", dmg:10}]},
+  {name:"Salamèche", hp:100, img:"https://img.pokemondb.net/sprites/home/normal/charmander.png",
+   moves:[{name:"Flammèche", dmg:20},{name:"Griffe", dmg:15}]},
+  {name:"Carapuce", hp:110, img:"https://img.pokemondb.net/sprites/home/normal/squirtle.png",
+   moves:[{name:"Pistolet à O", dmg:15},{name:"Morsure", dmg:15}]}
 ];
 
-let player1 = {};
-let player2 = {};
-let turn = 1;
+let player1={}, player2={}, turn=1;
 
-// Remplir les sélections
 const p1Select = document.getElementById('p1Select');
 const p2Select = document.getElementById('p2Select');
+const p1Img = document.getElementById('p1Img');
+const p2Img = document.getElementById('p2Img');
 
-pokemons.forEach((p, i) => {
-  let option1 = document.createElement('option');
-  option1.value = i; option1.text = p.name;
-  p1Select.add(option1);
-
-  let option2 = document.createElement('option');
-  option2.value = i; option2.text = p.name;
-  p2Select.add(option2);
+// remplir sélections
+pokemons.forEach((p,i)=>{
+  let o1=document.createElement('option'); o1.value=i; o1.text=p.name; p1Select.add(o1);
+  let o2=document.createElement('option'); o2.value=i; o2.text=p.name; p2Select.add(o2);
 });
 
-function startBattle() {
-  player1 = {...pokemons[p1Select.value]};
-  player2 = {...pokemons[p2Select.value]};
+// prévisualisation images
+p1Select.addEventListener('change', ()=>{p1Img.src=pokemons[p1Select.value].img;});
+p2Select.addEventListener('change', ()=>{p2Img.src=pokemons[p2Select.value].img;});
+p1Img.src=pokemons[0].img; p2Img.src=pokemons[0].img;
+
+function startBattle(){
+  player1={...pokemons[p1Select.value]};
+  player2={...pokemons[p2Select.value]};
   
-  document.getElementById('chooseArea').style.display = 'none';
-  document.getElementById('battleArea').style.display = 'flex';
+  document.getElementById('chooseArea').style.display='none';
+  document.getElementById('battleArea').style.display='block';
+  document.getElementById('battleBg').src=document.getElementById('bgSelect').value;
   
   updateUI();
 }
 
-function updateUI() {
-  document.getElementById('p1Name').innerText = player1.name + " (Joueur 1)";
-  document.getElementById('p2Name').innerText = player2.name + " (Joueur 2)";
+function updateUI(){
+  document.getElementById('p1Name').innerText=player1.name+" (J1)";
+  document.getElementById('p2Name').innerText=player2.name+" (J2)";
   
-  document.getElementById('p1HP').style.width = player1.hp + "%";
-  document.getElementById('p2HP').style.width = player2.hp + "%";
+  document.getElementById('p1HP').style.width=player1.hp+"%";
+  document.getElementById('p2HP').style.width=player2.hp+"%";
   
-  // Afficher les boutons d'attaque selon le tour
-  const p1MovesDiv = document.getElementById('p1Moves');
-  const p2MovesDiv = document.getElementById('p2Moves');
-  p1MovesDiv.innerHTML = '';
-  p2MovesDiv.innerHTML = '';
-
-  if(turn === 1) {
-    player1.moves.forEach((move, i) => {
-      const btn = document.createElement('button');
-      btn.innerText = move.name;
-      btn.onclick = () => attack(player1, player2, move);
+  const p1MovesDiv=document.getElementById('p1Moves');
+  const p2MovesDiv=document.getElementById('p2Moves');
+  p1MovesDiv.innerHTML=''; p2MovesDiv.innerHTML='';
+  
+  if(turn===1){
+    player1.moves.forEach(m=>{
+      const btn=document.createElement('button'); btn.innerText=m.name;
+      btn.onclick=()=>attack(player1,player2,m);
       p1MovesDiv.appendChild(btn);
     });
   } else {
-    player2.moves.forEach((move, i) => {
-      const btn = document.createElement('button');
-      btn.innerText = move.name;
-      btn.onclick = () => attack(player2, player1, move);
+    player2.moves.forEach(m=>{
+      const btn=document.createElement('button'); btn.innerText=m.name;
+      btn.onclick=()=>attack(player2,player1,m);
       p2MovesDiv.appendChild(btn);
     });
   }
 }
 
-function attack(attacker, defender, move) {
-  defender.hp -= move.dmg;
-  if(defender.hp < 0) defender.hp = 0;
-  document.getElementById('result').innerText = `${attacker.name} utilise ${move.name} !`;
+function attack(attacker,defender,move){
+  defender.hp-=move.dmg; if(defender.hp<0) defender.hp=0;
+  document.getElementById('result').innerText=`${attacker.name} utilise ${move.name} !`;
   
-  // Vérifier victoire
-  if(defender.hp <= 0) {
-    document.getElementById('result').innerText = `${attacker.name} gagne le combat !`;
-    document.getElementById('p1Moves').innerHTML = '';
-    document.getElementById('p2Moves').innerHTML = '';
+  if(defender.hp<=0){
+    document.getElementById('result').innerText=`${attacker.name} gagne le combat !`;
+    document.getElementById('p1Moves').innerHTML=''; document.getElementById('p2Moves').innerHTML='';
     return;
   }
-
-  // Changer de tour
-  turn = turn === 1 ? 2 : 1;
+  turn = turn===1?2:1;
   updateUI();
 }
 </script>
