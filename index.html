@@ -33,8 +33,11 @@ input,select{background:var(--input); color:var(--text);}
 button{background:var(--accent); color:black; font-weight:bold; cursor:pointer; transition:0.2s;}
 button:hover{opacity:0.85;}
 button:active{transform:scale(0.97);}
-#qrcode{background:white; padding:15px; margin:20px auto; border-radius:25px; width:fit-content; position:relative;}
-#qrcode img{border-radius:25px;}
+#qrcode{
+  background:white; padding:15px; margin:20px auto; border-radius:25px; width:fit-content; position:relative; display:none;
+  opacity:0; transform:scale(0.8); transition:0.4s;
+}
+#qrcode.show{display:block; opacity:1; transform:scale(1);}
 .historyItem{
   display:flex; align-items:center; justify-content:space-between; padding:10px; margin:10px 0; border-radius:15px;
   background:var(--input); transition:0.3s;
@@ -70,6 +73,7 @@ button:active{transform:scale(0.97);}
 <option value="250">250px</option>
 <option value="300">300px</option>
 </select>
+<button id="generateBtn">Générer le QR</button>
 <div id="qrcode"></div>
 <button id="downloadBtn">Télécharger QR</button>
 </div>
@@ -96,98 +100,96 @@ const themeSelect=document.getElementById("themeSelect");
 themeSelect.addEventListener("change",()=>document.body.setAttribute("data-theme",themeSelect.value));
 
 // GENERATE QR
-function genererQR(){
-let name=document.getElementById("qrName").value.trim();
-let txt=document.getElementById("text").value.trim();
-let color=document.getElementById("color").value;
-let size=parseInt(document.getElementById("size").value);
-if(!txt||!name) return;
-qrDiv.innerHTML="";
-qr=new QRCode(qrDiv,{text:txt,width:size,height:size,colorDark:color,colorLight:"#fff"});
-// logo center
-let img=document.createElement("img");
-img.src=logoSrc;
-img.style.width=(size/4)+"px";
-img.style.height=(size/4)+"px";
-img.style.position="absolute";
-img.style.top="50%";
-img.style.left="50%";
-img.style.transform="translate(-50%,-50%)";
-img.style.pointerEvents="none";
-qrDiv.appendChild(img);
-saveHistory(name,txt,color,size);
-}
-
-document.getElementById("text").addEventListener("input",genererQR);
-document.getElementById("qrName").addEventListener("input",genererQR);
-document.getElementById("color").addEventListener("input",genererQR);
-document.getElementById("size").addEventListener("change",genererQR);
+document.getElementById("generateBtn").addEventListener("click",()=>{
+  let name=document.getElementById("qrName").value.trim();
+  let txt=document.getElementById("text").value.trim();
+  let color=document.getElementById("color").value;
+  let size=parseInt(document.getElementById("size").value);
+  if(!txt || !name){ alert("Remplis le nom et le texte !"); return; }
+  qrDiv.innerHTML="";
+  qr=new QRCode(qrDiv,{text:txt,width:size,height:size,colorDark:color,colorLight:"#fff"});
+  // logo center
+  let img=document.createElement("img");
+  img.src=logoSrc;
+  img.style.width=(size/4)+"px";
+  img.style.height=(size/4)+"px";
+  img.style.position="absolute";
+  img.style.top="50%";
+  img.style.left="50%";
+  img.style.transform="translate(-50%,-50%)";
+  img.style.pointerEvents="none";
+  qrDiv.appendChild(img);
+  qrDiv.classList.add("show");
+  saveHistory(name,txt,color,size);
+});
 
 // DOWNLOAD QR
 document.getElementById("downloadBtn").onclick=()=>{
-let qrCanvasElem=qrDiv.querySelector("canvas");
-if(!qrCanvasElem){alert("Génère le QR d'abord!"); return;}
-let canvas=document.createElement("canvas");
-canvas.width=qrCanvasElem.width;
-canvas.height=qrCanvasElem.height;
-let ctx=canvas.getContext("2d");
-ctx.drawImage(qrCanvasElem,0,0);
-let logo=new Image();
-logo.src=logoSrc;
-logo.onload=()=>{
-ctx.drawImage(logo,(canvas.width/2)-(canvas.width/8),(canvas.height/2)-(canvas.height/8),canvas.width/4,canvas.height/4);
-let link=document.createElement("a");
-link.href=canvas.toDataURL();
-link.download=document.getElementById("qrName").value+".png";
-link.click();
-}
+  let qrCanvasElem=qrDiv.querySelector("canvas");
+  if(!qrCanvasElem){alert("Génère le QR d'abord!"); return;}
+  let canvas=document.createElement("canvas");
+  canvas.width=qrCanvasElem.width;
+  canvas.height=qrCanvasElem.height;
+  let ctx=canvas.getContext("2d");
+  ctx.drawImage(qrCanvasElem,0,0);
+  let logo=new Image();
+  logo.src=logoSrc;
+  logo.onload=()=>{
+    ctx.drawImage(logo,(canvas.width/2)-(canvas.width/8),(canvas.height/2)-(canvas.height/8),canvas.width/4,canvas.height/4);
+    let link=document.createElement("a");
+    link.href=canvas.toDataURL();
+    link.download=document.getElementById("qrName").value+".png";
+    link.click();
+  }
 };
 
 // HISTORY
 function saveHistory(name,txt,color,size){
-let history=JSON.parse(localStorage.getItem("qr_history")||"[]");
-history.unshift({name,txt,color,size,date:new Date().toLocaleString()});
-if(history.length>20) history.pop();
-localStorage.setItem("qr_history",JSON.stringify(history));
-loadHistory();
+  let history=JSON.parse(localStorage.getItem("qr_history")||"[]");
+  history.unshift({name,txt,color,size,date:new Date().toLocaleString()});
+  if(history.length>20) history.pop();
+  localStorage.setItem("qr_history",JSON.stringify(history));
+  loadHistory();
 }
+
 function loadHistory(){
-let list=document.getElementById("historyList");
-let history=JSON.parse(localStorage.getItem("qr_history")||"[]");
-list.innerHTML="";
-if(history.length===0){list.innerHTML="<p>Aucun QR généré.</p>"; return;}
-history.forEach(item=>{
-let div=document.createElement("div"); div.className="historyItem";
-let info=document.createElement("div"); info.className="historyContent";
-info.innerHTML=`<strong>${item.name}</strong><br>${item.date}`;
-let qrBox=document.createElement("div");
-let qrMini=document.createElement("div");
-new QRCode(qrMini,{text:item.txt,width:50,height:50,colorDark:item.color,colorLight:"#fff"});
-qrBox.style.position="relative";
-qrBox.appendChild(qrMini);
-let logoMini=document.createElement("img"); logoMini.src=logoSrc;
-qrBox.appendChild(logoMini);
-let dlBtn=document.createElement("button"); dlBtn.textContent="Télécharger";
-dlBtn.onclick=()=>{
-let canvas=document.createElement("canvas"); let qrCanvasElem=qrMini.querySelector("canvas");
-canvas.width=qrCanvasElem.width; canvas.height=qrCanvasElem.height;
-let ctx=canvas.getContext("2d"); ctx.drawImage(qrCanvasElem,0,0);
-let logo=new Image(); logo.src=logoSrc;
-logo.onload=()=>{
-ctx.drawImage(logo,(canvas.width/2)-(canvas.width/8),(canvas.height/2)-(canvas.height/8),canvas.width/4,canvas.height/4);
-let link=document.createElement("a"); link.href=canvas.toDataURL(); link.download=item.name+".png"; link.click();
-}}
-div.appendChild(info); div.appendChild(qrBox); div.appendChild(dlBtn);
-list.appendChild(div);
-});
+  let list=document.getElementById("historyList");
+  let history=JSON.parse(localStorage.getItem("qr_history")||"[]");
+  list.innerHTML="";
+  if(history.length===0){list.innerHTML="<p>Aucun QR généré.</p>"; return;}
+  history.forEach(item=>{
+    let div=document.createElement("div"); div.className="historyItem";
+    let info=document.createElement("div"); info.className="historyContent";
+    info.innerHTML=`<strong>${item.name}</strong><br>${item.date}`;
+    let qrBox=document.createElement("div");
+    let qrMini=document.createElement("div");
+    new QRCode(qrMini,{text:item.txt,width:50,height:50,colorDark:item.color,colorLight:"#fff"});
+    qrBox.style.position="relative";
+    qrBox.appendChild(qrMini);
+    let logoMini=document.createElement("img"); logoMini.src=logoSrc;
+    qrBox.appendChild(logoMini);
+    let dlBtn=document.createElement("button"); dlBtn.textContent="Télécharger";
+    dlBtn.onclick=()=>{
+      let canvas=document.createElement("canvas"); let qrCanvasElem=qrMini.querySelector("canvas");
+      canvas.width=qrCanvasElem.width; canvas.height=qrCanvasElem.height;
+      let ctx=canvas.getContext("2d"); ctx.drawImage(qrCanvasElem,0,0);
+      let logo=new Image(); logo.src=logoSrc;
+      logo.onload=()=>{
+        ctx.drawImage(logo,(canvas.width/2)-(canvas.width/8),(canvas.height/2)-(canvas.height/8),canvas.width/4,canvas.height/4);
+        let link=document.createElement("a"); link.href=canvas.toDataURL(); link.download=item.name+".png"; link.click();
+      }
+    };
+    div.appendChild(info); div.appendChild(qrBox); div.appendChild(dlBtn);
+    list.appendChild(div);
+  });
 }
 
 // NAVIGATION
 function switchPage(id,btn){
-['appPage','historyCard'].forEach(e=>document.getElementById(e).style.display="none");
-document.getElementById(id).style.display="block";
-document.querySelectorAll('.navBtn').forEach(e=>e.classList.remove('navActive'));
-btn.classList.add('navActive');
+  ['appPage','historyCard'].forEach(e=>document.getElementById(e).style.display="none");
+  document.getElementById(id).style.display="block";
+  document.querySelectorAll('.navBtn').forEach(e=>e.classList.remove('navActive'));
+  btn.classList.add('navActive');
 }
 
 // AUTO LOAD HISTORY
