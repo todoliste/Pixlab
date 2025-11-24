@@ -3,331 +3,266 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>QRForge</title>
-
+<title>QRForge Pro</title>
 <style>
-    :root {
-        --bg: #0d0d0d;
-        --card: #1a1a1a;
-        --text: white;
-        --input: #2b2b2b;
-        --accent: #00c4ff;
-    }
-
-    [data-theme="light"] {
-        --bg: #f2f2f2;
-        --card: #ffffff;
-        --text: #111;
-        --input: #e5e5e5;
-        --accent: #007acc;
-    }
-
-    body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background: var(--bg);
-        color: var(--text);
-    }
-
-    .center {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        padding: 20px;
-    }
-
-    .card {
-        background: var(--card);
-        padding: 25px;
-        border-radius: 20px;
-        width: 100%;
-        max-width: 380px;
-        box-shadow: 0 0 20px rgba(0,0,0,0.4);
-        animation: fade 0.3s ease;
-    }
-
-    @keyframes fade {
-        from {opacity: 0; transform: scale(0.95);}
-        to {opacity: 1; transform: scale(1);}
-    }
-
-    h2 {
-        text-align: center;
-        margin-bottom: 25px;
-        font-weight: bold;
-    }
-
-    input, select {
-        width: 100%;
-        padding: 12px;
-        margin-top: 12px;
-        border-radius: 12px;
-        border: none;
-        background: var(--input);
-        color: var(--text);
-        font-size: 16px;
-    }
-
-    button {
-        width: 100%;
-        padding: 14px;
-        margin-top: 20px;
-        border: none;
-        border-radius: 12px;
-        font-size: 17px;
-        font-weight: bold;
-        cursor: pointer;
-        background: var(--accent);
-        color: black;
-    }
-
-    #appPage, #profilePage, #historyPage {
-        display: none;
-    }
-
-    /* TOPBAR */
-    .topbar {
-        padding: 15px 20px;
-        background: var(--card);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .logout, .switchPage {
-        background: var(--accent);
-        border: none;
-        padding: 8px 12px;
-        border-radius: 10px;
-        font-size: 14px;
-        cursor: pointer;
-        font-weight: bold;
-        color: black;
-    }
-
-    #qrcode {
-        margin: 25px auto;
-        padding: 15px;
-        background: #fff;
-        border-radius: 15px;
-        width: fit-content;
-    }
-
-    /* NAV BOTTOM */
-    .bottomNav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        background: var(--card);
-        display: flex;
-        justify-content: space-around;
-        padding: 12px 0;
-        border-top: 1px solid #333;
-    }
-
-    .navBtn {
-        color: var(--text);
-        font-size: 15px;
-        cursor: pointer;
-        padding: 6px 12px;
-        border-radius: 10px;
-    }
-
-    .navActive {
-        background: var(--accent);
-        color: black;
-    }
-
-    .historyItem {
-        margin: 12px 0;
-        background: var(--card);
-        padding: 12px;
-        border-radius: 12px;
-        font-size: 14px;
-        word-break: break-all;
-    }
+:root{
+    --bg:#0d0d0d;
+    --card:#1a1a1a;
+    --text:white;
+    --input:#2b2b2b;
+    --accent:#00c4ff;
+}
+[data-theme="light"]{
+    --bg:#f2f2f2;
+    --card:#fff;
+    --text:#111;
+    --input:#e5e5e5;
+    --accent:#007acc;
+}
+body{
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+}
+.card{
+    background:var(--card);
+    border-radius:15px;
+    padding:20px;
+    max-width:400px;
+    margin:15px auto;
+    box-shadow:0 0 15px rgba(0,0,0,0.4);
+}
+input,select,button{
+    width:100%;
+    padding:12px;
+    margin-top:10px;
+    border-radius:10px;
+    border:none;
+    font-size:16px;
+}
+input,select{
+    background:var(--input);
+    color:var(--text);
+}
+button{
+    background:var(--accent);
+    color:black;
+    font-weight:bold;
+    cursor:pointer;
+}
+button:active{
+    transform:scale(0.97);
+}
+.topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 20px;
+    background:var(--card);
+}
+.bottomNav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    width:100%;
+    display:flex;
+    justify-content:space-around;
+    background:var(--card);
+    padding:10px 0;
+    border-top:1px solid #333;
+}
+.navBtn{
+    cursor:pointer;
+    padding:6px 12px;
+    border-radius:10px;
+}
+.navActive{
+    background:var(--accent);
+    color:black;
+}
+#qrcode{
+    background:white;
+    padding:10px;
+    margin:10px auto;
+    border-radius:10px;
+    width:fit-content;
+}
+.historyItem{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px;
+    margin:8px 0;
+    border-radius:10px;
+    background:var(--input);
+}
+.historyItem img{
+    width:50px;
+    height:50px;
+    margin-left:10px;
+}
 </style>
 </head>
-
 <body data-theme="dark">
 
-<!-- --------------- PAGE LOGIN --------------- -->
-<div id="loginPage" class="center">
-    <div class="card">
-        <h2>Connexion</h2>
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Mot de passe">
-        <button onclick="login()">Se connecter</button>
-    </div>
+<!-- LOGIN PAGE -->
+<div id="loginPage" class="card" style="margin-top:50px;">
+<h2>Connexion</h2>
+<input type="email" id="email" placeholder="Email">
+<input type="password" id="password" placeholder="Mot de passe">
+<button onclick="login()">Se connecter</button>
 </div>
 
-<!-- --------------- PAGE APP --------------- -->
-<div id="appPage">
-
-    <div class="topbar">
-        <h2>QRForge</h2>
-        <button class="logout" onclick="logout()">Déco</button>
-    </div>
-
-    <div class="center" style="height: calc(100vh - 160px);">
-        <div class="card">
-
-            <label>Texte :</label>
-            <input type="text" id="text" placeholder="Tape ici…">
-
-            <label>Couleur :</label>
-            <input type="color" id="color" value="#000000">
-
-            <label>Taille :</label>
-            <select id="size">
-                <option value="150">150px</option>
-                <option value="200" selected>200px</option>
-                <option value="250">250px</option>
-                <option value="300">300px</option>
-            </select>
-
-            <div id="qrcode"></div>
-
-            <button id="downloadBtn">Télécharger</button>
-        </div>
-    </div>
-</div><!-- --------------- PAGE PROFIL --------------- -->
-<div id="profilePage">
-    <div class="topbar">
-        <h2>Profil</h2>
-        <button class="logout" onclick="logout()">Déco</button>
-    </div>
-
-    <div class="center" style="height: calc(100vh - 80px);">
-        <div class="card">
-            <h2>Mon Profil</h2>
-            <p><strong>Email :</strong> <span id="userEmail"></span></p>
-            <label>Thème :</label>
-            <select id="themeSelect">
-                <option value="dark">Sombre</option>
-                <option value="light">Clair</option>
-            </select>
-        </div>
-    </div>
+<!-- APP PAGE -->
+<div id="appPage" style="display:none;">
+<div class="topbar">
+<h2>QRForge</h2>
+<button onclick="logout()">Déconnexion</button>
 </div>
 
-<!-- --------------- PAGE HISTORIQUE --------------- -->
-<div id="historyPage">
-    <div class="topbar">
-        <h2>Historique QR</h2>
-        <button class="logout" onclick="logout()">Déco</button>
-    </div>
-
-    <div class="center" style="height: calc(100vh - 80px); overflow-y: auto;">
-        <div class="card" id="historyList">
-            <!-- Les QR générés s’afficheront ici -->
-        </div>
-    </div>
+<div class="card">
+<label>Nom du QR (obligatoire)</label>
+<input type="text" id="qrName" placeholder="Ex: Mon QR perso">
+<label>Texte / Lien</label>
+<input type="text" id="text" placeholder="Tape ici…">
+<label>Couleur du QR</label>
+<input type="color" id="color" value="#000000">
+<label>Taille</label>
+<select id="size">
+<option value="150">150px</option>
+<option value="200" selected>200px</option>
+<option value="250">250px</option>
+<option value="300">300px</option>
+</select>
+<div id="qrcode"></div>
+<button id="downloadBtn">Télécharger QR</button>
+</div>
 </div>
 
-<!-- NAVIGATION BOTTOM -->
+<!-- HISTORIQUE PAGE -->
+<div id="historyPage" style="display:none;">
+<div class="topbar">
+<h2>Historique</h2>
+<button onclick="logout()">Déconnexion</button>
+</div>
+<div class="card" id="historyList">
+<p>Aucun QR généré.</p>
+</div>
+</div>
+
+<!-- PROFIL PAGE -->
+<div id="profilePage" style="display:none;">
+<div class="topbar">
+<h2>Profil</h2>
+<button onclick="logout()">Déconnexion</button>
+</div>
+<div class="card">
+<p><strong>Email :</strong> <span id="userEmail"></span></p>
+<label>Thème :</label>
+<select id="themeSelect">
+<option value="dark">Sombre</option>
+<option value="light">Clair</option>
+</select>
+</div>
+</div>
+
+<!-- NAVIGATION -->
 <div class="bottomNav">
-    <div class="navBtn navActive" onclick="switchPage('appPage', this)">QR</div>
-    <div class="navBtn" onclick="switchPage('historyPage', this)">Historique</div>
-    <div class="navBtn" onclick="switchPage('profilePage', this)">Profil</div>
+<div class="navBtn navActive" onclick="switchPage('appPage',this)">QR</div>
+<div class="navBtn" onclick="switchPage('historyPage',this)">Historique</div>
+<div class="navBtn" onclick="switchPage('profilePage',this)">Profil</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
-
 <script>
-/* ---------- LOGIN ---------- */
-function login() {
-    let email = document.getElementById("email").value.trim();
-    let pass = document.getElementById("password").value.trim();
-    if(email === "" || pass === "") { alert("Remplis tout poto."); return; }
-    localStorage.setItem("qr_user", email);
-    showApp();
+// ---------- LOGIN ----------
+function login(){
+let email=document.getElementById("email").value.trim();
+let pass=document.getElementById("password").value.trim();
+if(!email||!pass){alert("Remplis tout.");return;}
+localStorage.setItem("qr_user",email);
+showApp();
 }
-
-function logout() {
-    localStorage.removeItem("qr_user");
-    location.reload();
+function logout(){
+localStorage.removeItem("qr_user");
+location.reload();
 }
-
-/* ---------- SHOW PAGE ---------- */
-function showApp() {
-    document.getElementById("loginPage").style.display = "none";
-    document.getElementById("appPage").style.display = "block";
-    document.getElementById("userEmail").textContent = localStorage.getItem("qr_user") || "";
-    loadHistory();
+function showApp(){
+document.getElementById("loginPage").style.display="none";
+document.getElementById("appPage").style.display="block";
+document.getElementById("userEmail").textContent=localStorage.getItem("qr_user");
+loadHistory();
 }
-
-if(localStorage.getItem("qr_user")) showApp();
-
-/* ---------- NAVIGATION ---------- */
-function switchPage(pageId, btn) {
-    ['appPage','profilePage','historyPage'].forEach(id => document.getElementById(id).style.display = 'none');
-    document.getElementById(pageId).style.display = 'block';
-    document.querySelectorAll('.navBtn').forEach(el => el.classList.remove('navActive'));
-    btn.classList.add('navActive');
+// ---------- NAV ----------
+function switchPage(id,btn){
+['appPage','historyPage','profilePage'].forEach(e=>document.getElementById(e).style.display="none");
+document.getElementById(id).style.display="block";
+document.querySelectorAll('.navBtn').forEach(e=>e.classList.remove('navActive'));
+btn.classList.add('navActive');
 }
-
-/* ---------- THEME ---------- */
-const themeSelect = document.getElementById("themeSelect");
-themeSelect.addEventListener("change", () => {
-    document.body.setAttribute("data-theme", themeSelect.value);
-});
-
-/* ---------- QR GENERATION ---------- */
-let qrDiv = document.getElementById("qrcode");
-let qr;
-
-function genererQR() {
-    let txt = document.getElementById("text").value;
-    let color = document.getElementById("color").value;
-    let size = document.getElementById("size").value;
-    if(!txt) return;
-
-    qrDiv.innerHTML = "";
-    qr = new QRCode(qrDiv, {text: txt, width: size, height: size, colorDark: color, colorLight:"#fff"});
-    saveHistory(txt, color, size);
+// ---------- THEME ----------
+const themeSelect=document.getElementById("themeSelect");
+themeSelect.addEventListener("change",()=>document.body.setAttribute("data-theme",themeSelect.value));
+// ---------- QR GENERATION ----------
+let qrDiv=document.getElementById("qrcode"),qr;
+function genererQR(){
+let name=document.getElementById("qrName").value.trim();
+let txt=document.getElementById("text").value.trim();
+let color=document.getElementById("color").value;
+let size=document.getElementById("size").value;
+if(!txt||!name) return;
+qrDiv.innerHTML="";
+qr=new QRCode(qrDiv,{text:txt,width:size,height:size,colorDark:color,colorLight:"#fff"});
+saveHistory(name,txt,color,size);
 }
-document.getElementById("text").addEventListener("input", genererQR);
-document.getElementById("color").addEventListener("input", genererQR);
-document.getElementById("size").addEventListener("change", genererQR);
-
-/* ---------- DOWNLOAD ---------- */
-document.getElementById("downloadBtn").onclick = () => {
-    let img = qrDiv.querySelector("img");
-    if(!img){ alert("Génère un QR d'abord !"); return; }
-    let link = document.createElement("a");
-    link.href = img.src;
-    link.download = "qrforge.png";
-    link.click();
+document.getElementById("text").addEventListener("input",genererQR);
+document.getElementById("color").addEventListener("input",genererQR);
+document.getElementById("size").addEventListener("change",genererQR);
+document.getElementById("qrName").addEventListener("input",genererQR);
+// ---------- DOWNLOAD ----------
+document.getElementById("downloadBtn").onclick=()=>{
+let img=qrDiv.querySelector("img");
+if(!img){alert("Génère le QR d'abord!");return;}
+let link=document.createElement("a");
+link.href=img.src;
+link.download=document.getElementById("qrName").value+".png";
+link.click();
 };
-
-/* ---------- HISTORIQUE ---------- */
-function saveHistory(txt, color, size) {
-    let history = JSON.parse(localStorage.getItem("qr_history") || "[]");
-    let timestamp = new Date().toLocaleString();
-    let entry = {txt,color,size,timestamp};
-    history.unshift(entry);
-    if(history.length > 20) history.pop(); // max 20 items
-    localStorage.setItem("qr_history", JSON.stringify(history));
-    loadHistory();
+// ---------- HISTORIQUE ----------
+function saveHistory(name,txt,color,size){
+let history=JSON.parse(localStorage.getItem("qr_history")||"[]");
+let timestamp=new Date().toLocaleString();
+let entry={name,txt,color,size,timestamp};
+history.unshift(entry);
+if(history.length>20) history.pop();
+localStorage.setItem("qr_history",JSON.stringify(history));
+loadHistory();
 }
-
-function loadHistory() {
-    let list = document.getElementById("historyList");
-    if(!list) return;
-    let history = JSON.parse(localStorage.getItem("qr_history") || "[]");
-    list.innerHTML = "";
-    if(history.length === 0) list.innerHTML = "<p>Aucun QR généré pour l'instant.</p>";
-    history.forEach(item => {
-        let div = document.createElement("div");
-        div.className = "historyItem";
-        div.innerHTML = `<strong>${item.timestamp}</strong><br>${item.txt}<br>Couleur: ${item.color}, Taille: ${item.size}px`;
-        list.appendChild(div);
-    });
+function loadHistory(){
+let list=document.getElementById("historyList");
+let history=JSON.parse(localStorage.getItem("qr_history")||"[]");
+list.innerHTML="";
+if(history.length==0){list.innerHTML="<p>Aucun QR généré.</p>";return;}
+history.forEach(item=>{
+let div=document.createElement("div");
+div.className="historyItem";
+let qrBox=document.createElement("div");
+let qrTemp=document.createElement("div");
+new QRCode(qrTemp,{text:item.txt,width:50,height:50,colorDark:item.color,colorLight:"#fff"});
+qrBox.appendChild(qrTemp);
+div.innerHTML=`<div><strong>${item.name}</strong><br>${item.timestamp}</div>`;
+div.appendChild(qrBox);
+let dlBtn=document.createElement("button");
+dlBtn.textContent="Télécharger";
+dlBtn.style.marginLeft="10px";
+dlBtn.onclick=()=>{let img=qrTemp.querySelector("img");if(img){let link=document.createElement("a");link.href=img.src;link.download=item.name+".png";link.click();}};
+div.appendChild(dlBtn);
+list.appendChild(div);
+});
 }
+// ---------- AUTO LOGIN ----------
+if(localStorage.getItem("qr_user")) showApp();
 </script>
-
 </body>
 </html>
