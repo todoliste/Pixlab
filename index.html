@@ -17,11 +17,6 @@ body{
 .topbar{
   display:flex; justify-content:space-between; align-items:center; padding:15px 20px; background:var(--card); box-shadow:0 2px 10px rgba(0,0,0,0.3);
 }
-.bottomNav{
-  position:fixed; bottom:0; left:0; width:100%; display:flex; justify-content:space-around; background:var(--card); padding:10px 0; border-top:1px solid #333;
-}
-.navBtn{cursor:pointer; padding:8px 15px; border-radius:12px; transition:0.3s;}
-.navActive{background:var(--accent); color:black;}
 .card{
   background:rgba(255,255,255,0.05); backdrop-filter:blur(10px); border-radius:20px; padding:25px; max-width:400px; margin:20px auto; box-shadow:0 8px 25px rgba(0,0,0,0.5); transition:0.3s;
 }
@@ -34,7 +29,7 @@ button{background:var(--accent); color:black; font-weight:bold; cursor:pointer; 
 button:hover{opacity:0.85;}
 button:active{transform:scale(0.97);}
 #qrcode{
-  background:white; padding:15px; margin:20px auto; border-radius:25px; width:fit-content; position:relative; display:none;
+  background:white; padding:15px; margin:20px auto; border-radius:25px; width:fit-content; display:none;
   opacity:0; transform:scale(0.8); transition:0.4s;
 }
 #qrcode.show{display:block; opacity:1; transform:scale(1);}
@@ -43,14 +38,11 @@ button:active{transform:scale(0.97);}
   background:var(--input); transition:0.3s;
 }
 .historyItem:hover{transform:scale(1.02);}
-.historyItem img{width:50px; height:50px; border-radius:12px; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);}
-.historyContent{flex:1; margin-left:60px;}
+.historyContent{flex:1; margin-right:10px;}
 </style>
 </head>
 <body data-theme="dark">
 
-<!-- APP PAGE -->
-<div id="appPage">
 <div class="topbar">
 <h2>QRForge Pro</h2>
 <select id="themeSelect">
@@ -75,31 +67,23 @@ button:active{transform:scale(0.97);}
 </select>
 <button id="generateBtn">Générer le QR</button>
 <div id="qrcode"></div>
-<button id="downloadBtn">Télécharger QR</button>
 </div>
 
-<div class="card" id="historyCard">
+<div class="card">
 <h3>Historique</h3>
 <div id="historyList"><p>Aucun QR généré.</p></div>
-</div>
-</div>
-
-<div class="bottomNav">
-<div class="navBtn navActive" onclick="switchPage('appPage',this)">QR</div>
-<div class="navBtn" onclick="switchPage('historyCard',this)">Historique</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
 <script>
-const qrDiv=document.getElementById("qrcode");
-let qr;
-const logoSrc="https://upload.wikimedia.org/wikipedia/commons/6/6b/QR_Code.png";
-
 // THEME SWITCH
 const themeSelect=document.getElementById("themeSelect");
 themeSelect.addEventListener("change",()=>document.body.setAttribute("data-theme",themeSelect.value));
 
 // GENERATE QR
+const qrDiv=document.getElementById("qrcode");
+let qr;
+
 document.getElementById("generateBtn").addEventListener("click",()=>{
   let name=document.getElementById("qrName").value.trim();
   let txt=document.getElementById("text").value.trim();
@@ -108,40 +92,19 @@ document.getElementById("generateBtn").addEventListener("click",()=>{
   if(!txt || !name){ alert("Remplis le nom et le texte !"); return; }
   qrDiv.innerHTML="";
   qr=new QRCode(qrDiv,{text:txt,width:size,height:size,colorDark:color,colorLight:"#fff"});
-  // logo center
-  let img=document.createElement("img");
-  img.src=logoSrc;
-  img.style.width=(size/4)+"px";
-  img.style.height=(size/4)+"px";
-  img.style.position="absolute";
-  img.style.top="50%";
-  img.style.left="50%";
-  img.style.transform="translate(-50%,-50%)";
-  img.style.pointerEvents="none";
-  qrDiv.appendChild(img);
   qrDiv.classList.add("show");
   saveHistory(name,txt,color,size);
 });
 
-// DOWNLOAD QR
-document.getElementById("downloadBtn").onclick=()=>{
-  let qrCanvasElem=qrDiv.querySelector("canvas");
-  if(!qrCanvasElem){alert("Génère le QR d'abord!"); return;}
-  let canvas=document.createElement("canvas");
-  canvas.width=qrCanvasElem.width;
-  canvas.height=qrCanvasElem.height;
-  let ctx=canvas.getContext("2d");
-  ctx.drawImage(qrCanvasElem,0,0);
-  let logo=new Image();
-  logo.src=logoSrc;
-  logo.onload=()=>{
-    ctx.drawImage(logo,(canvas.width/2)-(canvas.width/8),(canvas.height/2)-(canvas.height/8),canvas.width/4,canvas.height/4);
-    let link=document.createElement("a");
-    link.href=canvas.toDataURL();
-    link.download=document.getElementById("qrName").value+".png";
-    link.click();
-  }
-};
+// DOWNLOAD FUNCTION
+function downloadQR(qrElement,name){
+  let canvas=qrElement.querySelector("canvas");
+  if(!canvas) return;
+  let link=document.createElement("a");
+  link.href=canvas.toDataURL();
+  link.download=name+".png";
+  link.click();
+}
 
 // HISTORY
 function saveHistory(name,txt,color,size){
@@ -163,36 +126,18 @@ function loadHistory(){
     info.innerHTML=`<strong>${item.name}</strong><br>${item.date}`;
     let qrBox=document.createElement("div");
     let qrMini=document.createElement("div");
-    new QRCode(qrMini,{text:item.txt,width:50,height:50,colorDark:item.color,colorLight:"#fff"});
-    qrBox.style.position="relative";
+    new QRCode(qrMini,{text:item.txt,width:100,height:100,colorDark:item.color,colorLight:"#fff"});
     qrBox.appendChild(qrMini);
-    let logoMini=document.createElement("img"); logoMini.src=logoSrc;
-    qrBox.appendChild(logoMini);
     let dlBtn=document.createElement("button"); dlBtn.textContent="Télécharger";
-    dlBtn.onclick=()=>{
-      let canvas=document.createElement("canvas"); let qrCanvasElem=qrMini.querySelector("canvas");
-      canvas.width=qrCanvasElem.width; canvas.height=qrCanvasElem.height;
-      let ctx=canvas.getContext("2d"); ctx.drawImage(qrCanvasElem,0,0);
-      let logo=new Image(); logo.src=logoSrc;
-      logo.onload=()=>{
-        ctx.drawImage(logo,(canvas.width/2)-(canvas.width/8),(canvas.height/2)-(canvas.height/8),canvas.width/4,canvas.height/4);
-        let link=document.createElement("a"); link.href=canvas.toDataURL(); link.download=item.name+".png"; link.click();
-      }
-    };
-    div.appendChild(info); div.appendChild(qrBox); div.appendChild(dlBtn);
+    dlBtn.onclick=()=>downloadQR(qrMini,item.name);
+    div.appendChild(info);
+    div.appendChild(qrBox);
+    div.appendChild(dlBtn);
     list.appendChild(div);
   });
 }
 
-// NAVIGATION
-function switchPage(id,btn){
-  ['appPage','historyCard'].forEach(e=>document.getElementById(e).style.display="none");
-  document.getElementById(id).style.display="block";
-  document.querySelectorAll('.navBtn').forEach(e=>e.classList.remove('navActive'));
-  btn.classList.add('navActive');
-}
-
-// AUTO LOAD HISTORY
+// LOAD HISTORY ON START
 loadHistory();
 </script>
 </body>
