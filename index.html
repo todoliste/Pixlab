@@ -1,177 +1,262 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>QRForge Pro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Studio</title>
+
 <style>
-:root{
-  --bg:#0d0d0d; --card:#1a1a1a; --text:#fff; --input:#2b2b2b; --accent:#00c4ff;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Inter", sans-serif;
 }
-[data-theme="light"]{
-  --bg:#f2f2f2; --card:#fff; --text:#111; --input:#e5e5e5; --accent:#007acc;
+
+body {
+    display: flex;
+    background: #f5f6fa;
+    height: 100vh;
+    overflow: hidden;
 }
-body{
-  margin:0; font-family:'Segoe UI',sans-serif; background:var(--bg); color:var(--text);
+
+/* --- SIDEBAR --- */
+.sidebar {
+    width: 260px;
+    background: #fff;
+    border-right: 1px solid #e1e1e1;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
 }
-.topbar{
-  display:flex; justify-content:space-between; align-items:center; padding:15px 20px; background:var(--card); box-shadow:0 2px 10px rgba(0,0,0,0.3);
+
+.logo {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 25px;
+    color: #222;
 }
-.tabs{display:flex; justify-content:center; margin:10px 0;}
-.tabBtn{
-  padding:10px 20px; margin:0 5px; cursor:pointer; border:none; border-radius:12px; font-weight:bold;
-  background:var(--card); color:var(--text); transition:0.3s;
+
+.nav button {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 12px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    cursor: pointer;
+    font-weight: 500;
+    background: #f2f3f5;
+    transition: .25s;
 }
-.tabBtn.active{background:var(--accent); color:black;}
-.card{
-  background:rgba(255,255,255,0.05); backdrop-filter:blur(10px); border-radius:20px; padding:25px; max-width:400px; margin:20px auto; box-shadow:0 8px 25px rgba(0,0,0,0.5); transition:0.3s;
+
+.nav button.active {
+    background: #4c7fff;
+    color: #fff;
 }
-.card:hover{box-shadow:0 12px 35px rgba(0,0,0,0.7);}
-input,select,button{
-  width:100%; padding:12px; margin-top:12px; border-radius:12px; border:none; font-size:16px;
+
+.nav button:hover {
+    background: #dfe2e7;
 }
-input,select{background:var(--input); color:var(--text);}
-button{background:var(--accent); color:black; font-weight:bold; cursor:pointer; transition:0.2s;}
-button:hover{opacity:0.85;}
-button:active{transform:scale(0.97);}
-#qrcode{
-  background:white; padding:15px; margin:20px auto; border-radius:25px; width:fit-content; display:none;
-  opacity:0; transform:scale(0.8); transition:0.4s;
+
+/* --- CONTENT AREA --- */
+.content {
+    flex: 1;
+    padding: 35px;
+    overflow-y: auto;
 }
-#qrcode.show{display:block; opacity:1; transform:scale(1);}
-.historyItem{
-  display:flex; align-items:center; justify-content:space-between; padding:10px; margin:10px 0; border-radius:15px;
-  background:var(--input); transition:0.3s;
+
+/* ---- CARD STYLE ---- */
+.card {
+    background: #fff;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 7px 20px rgba(0,0,0,0.05);
+    animation: fade .4s ease;
 }
-.historyItem:hover{transform:scale(1.02);}
-.historyContent{flex:1; margin-right:10px;}
+
+@keyframes fade {
+    from {opacity: 0; transform: translateY(10px);}
+    to {opacity: 1; transform: translateY(0);}
+}
+
+/* FORM */
+label {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0 20px 0;
+    border-radius: 10px;
+    border: 1px solid #dcdcdc;
+    font-size: 15px;
+}
+
+button.generate {
+    padding: 13px 20px;
+    background: #4c7fff;
+    border: none;
+    color: #fff;
+    border-radius: 10px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: .25s;
+}
+
+button.generate:hover {
+    background: #3d6dee;
+}
+
+/* QR Preview */
+.preview-box {
+    margin-top: 25px;
+    text-align: center;
+}
+
+.preview-box img {
+    width: 210px;
+    padding: 15px;
+    background: #fff;
+    border-radius: 22px;
+    margin-top: 10px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+
+/* HISTORIQUE */
+.history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+}
+
+.download-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    background: #4c7fff;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+/* Mobile */
+@media (max-width: 800px) {
+    body { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid #ddd; }
+}
 </style>
+
 </head>
-<body data-theme="dark">
+<body>
 
-<div class="topbar">
-<h2>QRForge Pro</h2>
-<select id="themeSelect">
-<option value="dark">Sombre</option>
-<option value="light">Clair</option>
-</select>
-</div>
+<div class="sidebar">
+    <div class="logo">QR Studio</div>
 
-<div class="tabs">
-<button class="tabBtn active" onclick="switchTab('qrTab',this)">QR Code</button>
-<button class="tabBtn" onclick="switchTab('historyTab',this)">Historique</button>
+    <div class="nav">
+        <button id="btnQR" class="active">QR Code</button>
+        <button id="btnHistory">Historique</button>
+    </div>
 </div>
 
-<!-- QR CODE SECTION -->
-<div id="qrTab">
-<div class="card">
-<label>Nom du QR (obligatoire)</label>
-<input type="text" id="qrName" placeholder="Ex: Mon QR">
-<label>Texte / Lien</label>
-<input type="text" id="text" placeholder="Tape ici…">
-<label>Couleur du QR</label>
-<input type="color" id="color" value="#000000">
-<label>Taille</label>
-<select id="size">
-<option value="150">150px</option>
-<option value="200" selected>200px</option>
-<option value="250">250px</option>
-<option value="300">300px</option>
-</select>
-<button id="generateBtn">Générer le QR</button>
-<div id="qrcode"></div>
-<button id="downloadBtn">Télécharger QR</button>
-</div>
+<div class="content">
+
+    <!-- --- PAGE QR CODE --- -->
+    <div id="pageQR" class="card">
+
+        <label>Texte du QR</label>
+        <input type="text" id="qrText" placeholder="Ex: Scan Me, lien, message...">
+
+        <label>Nom du QR</label>
+        <input type="text" id="qrName" placeholder="Nom pour l'historique">
+
+        <button class="generate" onclick="generateQR()">Générer</button>
+
+        <div class="preview-box">
+            <h3>Aperçu :</h3>
+            <div id="qrPreview"></div>
+        </div>
+
+    </div>
+
+    <!-- --- PAGE HISTORIQUE --- -->
+    <div id="pageHistory" class="card" style="display:none;">
+        <h2>Historique</h2>
+        <div id="historyList" style="margin-top:20px;"></div>
+    </div>
+
 </div>
 
-<!-- HISTORIQUE SECTION -->
-<div id="historyTab" style="display:none;">
-<div class="card">
-<h3>Historique</h3>
-<div id="historyList"><p>Aucun QR généré.</p></div>
-</div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script>
-// THEME SWITCH
-const themeSelect=document.getElementById("themeSelect");
-themeSelect.addEventListener("change",()=>document.body.setAttribute("data-theme",themeSelect.value));
 
-// TAB SWITCH
-function switchTab(tabId,btn){
-  document.getElementById('qrTab').style.display='none';
-  document.getElementById('historyTab').style.display='none';
-  document.getElementById(tabId).style.display='block';
-  document.querySelectorAll('.tabBtn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-}
-
-// QR GENERATION
-const qrDiv=document.getElementById("qrcode");
-let qr;
-document.getElementById("generateBtn").addEventListener("click",()=>{
-  let name=document.getElementById("qrName").value.trim();
-  let txt=document.getElementById("text").value.trim();
-  let color=document.getElementById("color").value;
-  let size=parseInt(document.getElementById("size").value);
-  if(!txt || !name){ alert("Remplis le nom et le texte !"); return; }
-  qrDiv.innerHTML="";
-  qr=new QRCode(qrDiv,{text:txt,width:size,height:size,colorDark:color,colorLight:"#fff"});
-  qrDiv.classList.add("show");
-  saveHistory(name,txt,color,size);
-});
-
-// DOWNLOAD FUNCTION
-document.getElementById("downloadBtn").onclick=()=>{
-  let qrCanvasElem=qrDiv.querySelector("canvas");
-  if(!qrCanvasElem){alert("Génère le QR d'abord!"); return;}
-  let link=document.createElement("a");
-  link.href=qrCanvasElem.toDataURL();
-  link.download=document.getElementById("qrName").value+".png";
-  link.click();
+// Navigation entre les pages
+btnQR.onclick = () => {
+    btnQR.classList.add("active");
+    btnHistory.classList.remove("active");
+    pageQR.style.display = "block";
+    pageHistory.style.display = "none";
 };
 
-// HISTORY MANAGEMENT
-function saveHistory(name,txt,color,size){
-  let history=JSON.parse(localStorage.getItem("qr_history")||"[]");
-  history.unshift({name,txt,color,size,date:new Date().toLocaleString()});
-  if(history.length>20) history.pop();
-  localStorage.setItem("qr_history",JSON.stringify(history));
-  loadHistory();
+btnHistory.onclick = () => {
+    btnQR.classList.remove("active");
+    btnHistory.classList.add("active");
+    pageQR.style.display = "none";
+    pageHistory.style.display = "block";
+};
+
+
+// Génération QR
+function generateQR() {
+    const text = document.getElementById("qrText").value.trim();
+    const name = document.getElementById("qrName").value.trim();
+
+    if (!text || !name) {
+        alert("Il faut remplir le texte et le nom !");
+        return;
+    }
+
+    QRCode.toDataURL(text, { width: 250, margin: 1 }, function (err, url) {
+
+        // Affichage QR
+        document.getElementById("qrPreview").innerHTML =
+            `<img src="${url}"><br><a href="${url}" download="${name}.png">Télécharger</a>`;
+
+        // Ajout dans l'historique
+        const history = document.getElementById("historyList");
+
+        const entry = document.createElement("div");
+        entry.className = "history-item";
+
+        entry.innerHTML = `
+            <div>
+                <strong>${name}</strong><br>
+                <small>${new Date().toLocaleString()}</small>
+            </div>
+            <button class="download-btn" onclick="downloadQR('${url}', '${name}')">Télécharger</button>
+        `;
+
+        history.prepend(entry);
+
+    });
 }
 
-function loadHistory(){
-  let list=document.getElementById("historyList");
-  let history=JSON.parse(localStorage.getItem("qr_history")||"[]");
-  list.innerHTML="";
-  if(history.length===0){list.innerHTML="<p>Aucun QR généré.</p>"; return;}
-  history.forEach(item=>{
-    let div=document.createElement("div"); div.className="historyItem";
-    let info=document.createElement("div"); info.className="historyContent";
-    info.innerHTML=`<strong>${item.name}</strong><br>${item.date}`;
-    let qrBox=document.createElement("div");
-    let qrMini=document.createElement("div");
-    new QRCode(qrMini,{text:item.txt,width:100,height:100,colorDark:item.color,colorLight:"#fff"});
-    qrBox.appendChild(qrMini);
-    let dlBtn=document.createElement("button"); dlBtn.textContent="Télécharger";
-    dlBtn.onclick=()=>{ 
-      let canvas=qrMini.querySelector("canvas");
-      if(!canvas) return;
-      let link=document.createElement("a");
-      link.href=canvas.toDataURL();
-      link.download=item.name+".png";
-      link.click();
-    };
-    div.appendChild(info);
-    div.appendChild(qrBox);
-    div.appendChild(dlBtn);
-    list.appendChild(div);
-  });
+// Téléchargement
+function downloadQR(url, filename) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename + ".png";
+    a.click();
 }
 
-// LOAD HISTORY ON START
-loadHistory();
 </script>
+
 </body>
 </html>
