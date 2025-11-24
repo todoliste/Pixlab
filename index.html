@@ -1,9 +1,297 @@
-Ok vas-y, envoie-moi le fichier (ou le lien) du grand dictionnaire que tu veux utiliser.
-Une fois que tu me le partages, je te fais :
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Studio</title>
 
-✅ Un site 100% HTML/CSS/JS, sans serveur
-✅ Consultable sans internet
-✅ Avec recherche ultra rapide dans tous les mots
-✅ Et je l’adapte exactement à la structure de ton dictionnaire
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Inter", sans-serif;
+    transition: background .25s, color .25s;
+}
 
-Envoie le fichier — CSV, JSON, TXT, XML, n’importe quoi — et je m’occupe du reste.
+/* ---------- LIGHT MODE ---------- */
+body {
+    display: flex;
+    background: #f5f6fa;
+    height: 100vh;
+    overflow: hidden;
+    color: #222;
+}
+
+.sidebar {
+    width: 260px;
+    background: #fff;
+    border-right: 1px solid #e1e1e1;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+}
+
+.logo { font-size: 24px; font-weight: 700; margin-bottom: 25px; }
+
+.nav button {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 12px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    background: #f2f3f5;
+    color: #333;
+    font-size: 15px;
+    transition: .25s;
+}
+
+.nav button.active {
+    background: #4c7fff;
+    color: #fff;
+}
+
+.nav button:hover {
+    background: #e4e6ea;
+}
+
+.content {
+    flex: 1;
+    padding: 35px;
+    overflow-y: auto;
+}
+
+.card {
+    background: #fff;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 7px 20px rgba(0,0,0,0.05);
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0 20px 0;
+    border-radius: 10px;
+    border: 1px solid #dcdcdc;
+    font-size: 15px;
+}
+
+button.generate {
+    padding: 13px 20px;
+    background: #4c7fff;
+    border: none;
+    color: #fff;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.preview-box img {
+    width: 210px;
+    padding: 15px;
+    background: #fff;
+    border-radius: 22px;
+    margin-top: 10px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+}
+
+.download-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    background: #4c7fff;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+
+/* ---------- DARK MODE ---------- */
+body.dark {
+    background: #0f1116;
+    color: #e8e8e8;
+}
+
+body.dark .sidebar {
+    background: #14161c;
+    border-right: 1px solid #2a2d35;
+    color: #fff;
+}
+
+body.dark .nav button {
+    background: #1b1d24;
+    color: #dcdcdc;
+}
+
+body.dark .nav button:hover {
+    background: #242730;
+}
+
+body.dark .nav button.active {
+    background: #4c7fff;
+    color: #fff;
+}
+
+body.dark .card {
+    background: #1b1d24;
+    color: #fff;
+    box-shadow: 0 7px 22px rgba(0,0,0,0.4);
+}
+
+body.dark input {
+    background: #262a33;
+    border: 1px solid #3a3e47;
+    color: #fff;
+}
+
+body.dark .preview-box img {
+    background: #1b1d24;
+}
+
+body.dark .history-item {
+    background: #1b1d24;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+}
+
+.mode-switch {
+    margin-top: auto;
+    padding-top: 25px;
+}
+
+.mode-toggle {
+    padding: 12px;
+    background: #f2f3f5;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+}
+
+body.dark .mode-toggle {
+    background: #252932;
+    color: #fff;
+}
+
+@media (max-width: 800px) {
+    body { flex-direction: column; }
+    .sidebar { width: 100%; border-bottom: 1px solid #333; }
+}
+</style>
+
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="logo">QR Studio</div>
+
+    <div class="nav">
+        <button id="btnQR" class="active">QR Code</button>
+        <button id="btnHistory">Historique</button>
+    </div>
+
+    <div class="mode-switch">
+        <div class="mode-toggle" id="toggleDark">🌙 Mode sombre</div>
+    </div>
+</div>
+
+<div class="content">
+
+    <!-- Page QR -->
+    <div id="pageQR" class="card">
+        <label>Texte du QR</label>
+        <input type="text" id="qrText" placeholder="Ex: Scan Me, lien...">
+
+        <label>Nom du QR</label>
+        <input type="text" id="qrName" placeholder="Nom pour l'historique">
+
+        <button class="generate" onclick="generateQR()">Générer</button>
+
+        <div class="preview-box">
+            <h3>Aperçu :</h3>
+            <div id="qrPreview"></div>
+        </div>
+    </div>
+
+    <!-- Page Historique -->
+    <div id="pageHistory" class="card" style="display:none;">
+        <h2>Historique</h2>
+        <div id="historyList" style="margin-top:20px;"></div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script>
+
+// Navigation
+btnQR.onclick = () => {
+    btnQR.classList.add("active");
+    btnHistory.classList.remove("active");
+    pageQR.style.display = "block";
+    pageHistory.style.display = "none";
+};
+
+btnHistory.onclick = () => {
+    btnQR.classList.remove("active");
+    btnHistory.classList.add("active");
+    pageQR.style.display = "none";
+    pageHistory.style.display = "block";
+};
+
+// Génération QR
+function generateQR() {
+    const text = qrText.value.trim();
+    const name = qrName.value.trim();
+
+    if (!text || !name) {
+        alert("Il faut remplir le texte ET le nom du QR !");
+        return;
+    }
+
+    QRCode.toDataURL(text, { width: 250, margin: 1 }, (err, url) => {
+        qrPreview.innerHTML =
+            `<img src="${url}"><br><a href="${url}" download="${name}.png">Télécharger</a>`;
+
+        const entry = document.createElement("div");
+        entry.className = "history-item";
+        entry.innerHTML = `
+            <div>
+                <strong>${name}</strong><br>
+                <small>${new Date().toLocaleString()}</small>
+            </div>
+            <button class="download-btn" onclick="downloadQR('${url}', '${name}')">Télécharger</button>
+        `;
+        historyList.prepend(entry);
+    });
+}
+
+// Téléchargement
+function downloadQR(url, name) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name + ".png";
+    a.click();
+}
+
+// Mode sombre
+const toggleDark = document.getElementById("toggleDark");
+
+toggleDark.onclick = () => {
+    document.body.classList.toggle("dark");
+    toggleDark.innerHTML = document.body.classList.contains("dark")
+        ? "☀️ Mode clair"
+        : "🌙 Mode sombre";
+};
+
+</script>
+</body>
+</html>
