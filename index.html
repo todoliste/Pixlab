@@ -6,14 +6,29 @@
 <title>QRForge</title>
 
 <style>
+    :root {
+        --bg: #0d0d0d;
+        --card: #1a1a1a;
+        --text: white;
+        --input: #2b2b2b;
+        --accent: #00c4ff;
+    }
+
+    [data-theme="light"] {
+        --bg: #f2f2f2;
+        --card: #ffffff;
+        --text: #111;
+        --input: #e5e5e5;
+        --accent: #007acc;
+    }
+
     body {
         margin: 0;
         font-family: Arial, sans-serif;
-        background: #0d0d0d;
-        color: white;
+        background: var(--bg);
+        color: var(--text);
     }
 
-    /* CENTRAGE GLOBAL */
     .center {
         display: flex;
         justify-content: center;
@@ -22,14 +37,13 @@
         padding: 20px;
     }
 
-    /* CARTE */
     .card {
-        background: #1a1a1a;
+        background: var(--card);
         padding: 25px;
         border-radius: 20px;
         width: 100%;
         max-width: 380px;
-        box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        box-shadow: 0 0 20px rgba(0,0,0,0.4);
         animation: fade 0.3s ease;
     }
 
@@ -50,8 +64,8 @@
         margin-top: 12px;
         border-radius: 12px;
         border: none;
-        background: #2b2b2b;
-        color: white;
+        background: var(--input);
+        color: var(--text);
         font-size: 16px;
     }
 
@@ -64,48 +78,82 @@
         font-size: 17px;
         font-weight: bold;
         cursor: pointer;
-        background: #00c4ff;
+        background: var(--accent);
         color: black;
     }
 
-    button:active {
-        transform: scale(0.97);
+    #appPage, #profilePage, #historyPage {
+        display: none;
     }
 
-    /* APP TOPBAR */
+    /* TOPBAR */
     .topbar {
         padding: 15px 20px;
-        background: #111;
+        background: var(--card);
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
 
-    .logout {
-        background: #ff4242;
-        padding: 10px 14px;
-        border-radius: 10px;
+    .logout, .switchPage {
+        background: var(--accent);
         border: none;
-        color: white;
+        padding: 8px 12px;
+        border-radius: 10px;
         font-size: 14px;
         cursor: pointer;
+        font-weight: bold;
+        color: black;
     }
 
     #qrcode {
         margin: 25px auto;
         padding: 15px;
-        background: white;
+        background: #fff;
         border-radius: 15px;
         width: fit-content;
     }
 
-    #appPage { display: none; }
+    /* NAV BOTTOM */
+    .bottomNav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: var(--card);
+        display: flex;
+        justify-content: space-around;
+        padding: 12px 0;
+        border-top: 1px solid #333;
+    }
+
+    .navBtn {
+        color: var(--text);
+        font-size: 15px;
+        cursor: pointer;
+        padding: 6px 12px;
+        border-radius: 10px;
+    }
+
+    .navActive {
+        background: var(--accent);
+        color: black;
+    }
+
+    .historyItem {
+        margin: 12px 0;
+        background: var(--card);
+        padding: 12px;
+        border-radius: 12px;
+        font-size: 14px;
+        word-break: break-all;
+    }
 </style>
 </head>
 
-<body>
+<body data-theme="dark">
 
-<!-- ---------------- PAGE DE LOGIN ---------------- -->
+<!-- --------------- PAGE LOGIN --------------- -->
 <div id="loginPage" class="center">
     <div class="card">
         <h2>Connexion</h2>
@@ -115,18 +163,18 @@
     </div>
 </div>
 
-<!-- ---------------- PAGE D'APPLICATION ---------------- -->
+<!-- --------------- PAGE APP --------------- -->
 <div id="appPage">
 
     <div class="topbar">
         <h2>QRForge</h2>
-        <button class="logout" onclick="logout()">Déconnexion</button>
+        <button class="logout" onclick="logout()">Déco</button>
     </div>
 
-    <div class="center" style="height: calc(100vh - 80px);">
+    <div class="center" style="height: calc(100vh - 160px);">
         <div class="card">
 
-            <label>Texte / Lien :</label>
+            <label>Texte :</label>
             <input type="text" id="text" placeholder="Tape ici…">
 
             <label>Couleur :</label>
@@ -134,10 +182,10 @@
 
             <label>Taille :</label>
             <select id="size">
-                <option value="150">150 px</option>
-                <option value="200" selected>200 px</option>
-                <option value="250">250 px</option>
-                <option value="300">300 px</option>
+                <option value="150">150px</option>
+                <option value="200" selected>200px</option>
+                <option value="250">250px</option>
+                <option value="300">300px</option>
             </select>
 
             <div id="qrcode"></div>
@@ -145,9 +193,47 @@
             <button id="downloadBtn">Télécharger</button>
         </div>
     </div>
+</div><!-- --------------- PAGE PROFIL --------------- -->
+<div id="profilePage">
+    <div class="topbar">
+        <h2>Profil</h2>
+        <button class="logout" onclick="logout()">Déco</button>
+    </div>
+
+    <div class="center" style="height: calc(100vh - 80px);">
+        <div class="card">
+            <h2>Mon Profil</h2>
+            <p><strong>Email :</strong> <span id="userEmail"></span></p>
+            <label>Thème :</label>
+            <select id="themeSelect">
+                <option value="dark">Sombre</option>
+                <option value="light">Clair</option>
+            </select>
+        </div>
+    </div>
 </div>
 
-<!-- LIBRAIRIE QR -->
+<!-- --------------- PAGE HISTORIQUE --------------- -->
+<div id="historyPage">
+    <div class="topbar">
+        <h2>Historique QR</h2>
+        <button class="logout" onclick="logout()">Déco</button>
+    </div>
+
+    <div class="center" style="height: calc(100vh - 80px); overflow-y: auto;">
+        <div class="card" id="historyList">
+            <!-- Les QR générés s’afficheront ici -->
+        </div>
+    </div>
+</div>
+
+<!-- NAVIGATION BOTTOM -->
+<div class="bottomNav">
+    <div class="navBtn navActive" onclick="switchPage('appPage', this)">QR</div>
+    <div class="navBtn" onclick="switchPage('historyPage', this)">Historique</div>
+    <div class="navBtn" onclick="switchPage('profilePage', this)">Profil</div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
 
 <script>
@@ -155,31 +241,39 @@
 function login() {
     let email = document.getElementById("email").value.trim();
     let pass = document.getElementById("password").value.trim();
-
-    if (email === "" || pass === "") {
-        alert("Remplis tout poto.");
-        return;
-    }
-
+    if(email === "" || pass === "") { alert("Remplis tout poto."); return; }
     localStorage.setItem("qr_user", email);
     showApp();
 }
 
+function logout() {
+    localStorage.removeItem("qr_user");
+    location.reload();
+}
+
+/* ---------- SHOW PAGE ---------- */
 function showApp() {
     document.getElementById("loginPage").style.display = "none";
     document.getElementById("appPage").style.display = "block";
+    document.getElementById("userEmail").textContent = localStorage.getItem("qr_user") || "";
+    loadHistory();
 }
 
-function logout() {
-    localStorage.removeItem("qr_user");
-    document.getElementById("appPage").style.display = "none";
-    document.getElementById("loginPage").style.display = "flex";
+if(localStorage.getItem("qr_user")) showApp();
+
+/* ---------- NAVIGATION ---------- */
+function switchPage(pageId, btn) {
+    ['appPage','profilePage','historyPage'].forEach(id => document.getElementById(id).style.display = 'none');
+    document.getElementById(pageId).style.display = 'block';
+    document.querySelectorAll('.navBtn').forEach(el => el.classList.remove('navActive'));
+    btn.classList.add('navActive');
 }
 
-/* Auto-login */
-if (localStorage.getItem("qr_user")) {
-    showApp();
-}
+/* ---------- THEME ---------- */
+const themeSelect = document.getElementById("themeSelect");
+themeSelect.addEventListener("change", () => {
+    document.body.setAttribute("data-theme", themeSelect.value);
+});
 
 /* ---------- QR GENERATION ---------- */
 let qrDiv = document.getElementById("qrcode");
@@ -189,30 +283,50 @@ function genererQR() {
     let txt = document.getElementById("text").value;
     let color = document.getElementById("color").value;
     let size = document.getElementById("size").value;
+    if(!txt) return;
 
     qrDiv.innerHTML = "";
-
-    qr = new QRCode(qrDiv, {
-        text: txt,
-        width: size,
-        height: size,
-        colorDark: color,
-        colorLight: "#ffffff"
-    });
+    qr = new QRCode(qrDiv, {text: txt, width: size, height: size, colorDark: color, colorLight:"#fff"});
+    saveHistory(txt, color, size);
 }
-
 document.getElementById("text").addEventListener("input", genererQR);
 document.getElementById("color").addEventListener("input", genererQR);
 document.getElementById("size").addEventListener("change", genererQR);
 
+/* ---------- DOWNLOAD ---------- */
 document.getElementById("downloadBtn").onclick = () => {
     let img = qrDiv.querySelector("img");
-    if (!img) return alert("Génère d'abord un QR poto !");
+    if(!img){ alert("Génère un QR d'abord !"); return; }
     let link = document.createElement("a");
     link.href = img.src;
     link.download = "qrforge.png";
     link.click();
 };
+
+/* ---------- HISTORIQUE ---------- */
+function saveHistory(txt, color, size) {
+    let history = JSON.parse(localStorage.getItem("qr_history") || "[]");
+    let timestamp = new Date().toLocaleString();
+    let entry = {txt,color,size,timestamp};
+    history.unshift(entry);
+    if(history.length > 20) history.pop(); // max 20 items
+    localStorage.setItem("qr_history", JSON.stringify(history));
+    loadHistory();
+}
+
+function loadHistory() {
+    let list = document.getElementById("historyList");
+    if(!list) return;
+    let history = JSON.parse(localStorage.getItem("qr_history") || "[]");
+    list.innerHTML = "";
+    if(history.length === 0) list.innerHTML = "<p>Aucun QR généré pour l'instant.</p>";
+    history.forEach(item => {
+        let div = document.createElement("div");
+        div.className = "historyItem";
+        div.innerHTML = `<strong>${item.timestamp}</strong><br>${item.txt}<br>Couleur: ${item.color}, Taille: ${item.size}px`;
+        list.appendChild(div);
+    });
+}
 </script>
 
 </body>
