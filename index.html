@@ -1,555 +1,297 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Calc Secret</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body{background:#111;color:white;font-family:Arial;margin:0;padding:0;}
-    #calc,#secret{max-width:380px;margin:20px auto;background:#222;padding:15px;border-radius:10px;}
-    #screen{width:100%;height:55px;background:#000;color:#0f0;font-size:26px;border:none;padding:10px;margin-bottom:10px;border-radius:5px;}
-    .button-row{display:flex;flex-wrap:wrap;justify-content:space-between;}
-    button{flex:1 1 22%;margin:5px 1%;height:60px;font-size:22px;background:#333;color:white;border:none;border-radius:8px;}
-    #secret{display:none;max-height:85vh;overflow:auto;position:relative;}
-    input,textarea{width:100%;margin-bottom:10px;border-radius:8px;border:none;padding:10px;font-size:16px;}
-    #dict-entries{max-height:300px;overflow:auto;background:#111;padding:10px;border-radius:8px;}
-    .dict-entry{margin-bottom:10px;}
-    .dict-word{font-weight:bold;}
-    #close-secret{position:sticky;top:0;background:#f00;color:#fff;border:none;border-radius:6px;padding:7px 12px;margin-bottom:10px;}
-    h2{margin-top:20px;font-size:20px;}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR Studio</title>
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Inter", sans-serif;
+    transition: background .25s, color .25s;
+}
+
+/* ---------- LIGHT MODE ---------- */
+body {
+    display: flex;
+    background: #f5f6fa;
+    height: 100vh;
+    overflow: hidden;
+    color: #222;
+}
+
+.sidebar {
+    width: 260px;
+    background: #fff;
+    border-right: 1px solid #e1e1e1;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+}
+
+.logo { font-size: 24px; font-weight: 700; margin-bottom: 25px; }
+
+.nav button {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 12px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    background: #f2f3f5;
+    color: #333;
+    font-size: 15px;
+    transition: .25s;
+}
+
+.nav button.active {
+    background: #4c7fff;
+    color: #fff;
+}
+
+.nav button:hover {
+    background: #e4e6ea;
+}
+
+.content {
+    flex: 1;
+    padding: 35px;
+    overflow-y: auto;
+}
+
+.card {
+    background: #fff;
+    padding: 25px;
+    border-radius: 16px;
+    box-shadow: 0 7px 20px rgba(0,0,0,0.05);
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0 20px 0;
+    border-radius: 10px;
+    border: 1px solid #dcdcdc;
+    font-size: 15px;
+}
+
+button.generate {
+    padding: 13px 20px;
+    background: #4c7fff;
+    border: none;
+    color: #fff;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.preview-box img {
+    width: 210px;
+    padding: 15px;
+    background: #fff;
+    border-radius: 22px;
+    margin-top: 10px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+}
+
+.download-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    background: #4c7fff;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+
+/* ---------- DARK MODE ---------- */
+body.dark {
+    background: #0f1116;
+    color: #e8e8e8;
+}
+
+body.dark .sidebar {
+    background: #14161c;
+    border-right: 1px solid #2a2d35;
+    color: #fff;
+}
+
+body.dark .nav button {
+    background: #1b1d24;
+    color: #dcdcdc;
+}
+
+body.dark .nav button:hover {
+    background: #242730;
+}
+
+body.dark .nav button.active {
+    background: #4c7fff;
+    color: #fff;
+}
+
+body.dark .card {
+    background: #1b1d24;
+    color: #fff;
+    box-shadow: 0 7px 22px rgba(0,0,0,0.4);
+}
+
+body.dark input {
+    background: #262a33;
+    border: 1px solid #3a3e47;
+    color: #fff;
+}
+
+body.dark .preview-box img {
+    background: #1b1d24;
+}
+
+body.dark .history-item {
+    background: #1b1d24;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+}
+
+.mode-switch {
+    margin-top: auto;
+    padding-top: 25px;
+}
+
+.mode-toggle {
+    padding: 12px;
+    background: #f2f3f5;
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+}
+
+body.dark .mode-toggle {
+    background: #252932;
+    color: #fff;
+}
+
+@media (max-width: 800px) {
+    body { flex-direction: column; }
+    .sidebar { width: 100%; border-bottom: 1px solid #333; }
+}
+</style>
+
 </head>
 <body>
 
-  <div id="calc">
-    <input type="text" id="screen" disabled>
+<div class="sidebar">
+    <div class="logo">QR Studio</div>
 
-    <div class="button-row">
-      <button onclick="press('7')">7</button>
-      <button onclick="press('8')">8</button>
-      <button onclick="press('9')">9</button>
-      <button onclick="press('/')">/</button>
-
-      <button onclick="press('4')">4</button>
-      <button onclick="press('5')">5</button>
-      <button onclick="press('6')">6</button>
-      <button onclick="press('*')">*</button>
-
-      <button onclick="press('1')">1</button>
-      <button onclick="press('2')">2</button>
-      <button onclick="press('3')">3</button>
-      <button onclick="press('-')">-</button>
-
-      <button onclick="press('0')">0</button>
-      <button onclick="press('.')">.</button>
-      <button onclick="equal()">=</button>
-      <button onclick="press('+')">+</button>
-
-      <button style="flex:1 1 100%" onclick="clearCalc()">C</button>
+    <div class="nav">
+        <button id="btnQR" class="active">QR Code</button>
+        <button id="btnHistory">Historique</button>
     </div>
-  </div>
 
-  <div id="secret">
-    <button id="close-secret" onclick="closeSecret()">Fermer</button>
+    <div class="mode-switch">
+        <div class="mode-toggle" id="toggleDark">🌙 Mode sombre</div>
+    </div>
+</div>
 
-    <h2>Dictionnaire</h2>
-    <input type="text" id="dict-search" placeholder="Chercher un mot…">
-    <div id="dict-entries">Chargement…</div>
+<div class="content">
 
-    <h2>Notes par matière</h2>
-    <select id="matiere">
-      <option value="francais">Français</option>
-      <option value="maths">Maths</option>
-      <option value="histoire">Histoire</option>
-      <option value="geo">Géographie</option>
-      <option value="svt">SVT</option>
-      <option value="physique">Physique</option>
-      <option value="anglais">Anglais</option>
-    </select>
+    <!-- Page QR -->
+    <div id="pageQR" class="card">
+        <label>Texte du QR</label>
+        <input type="text" id="qrText" placeholder="Ex: Scan Me, lien...">
 
-    <textarea id="note" placeholder="Écris ta note secrète ici…"></textarea>
-    <button onclick="saveNote()">Sauvegarder</button>
+        <label>Nom du QR</label>
+        <input type="text" id="qrName" placeholder="Nom pour l'historique">
 
-    <h3>Notes enregistrées :</h3>
-    <div id="notes"></div><!-- PARTIE 2/5 : dictionnaire (mots 1 à 150) -->
+        <button class="generate" onclick="generateQR()">Générer</button>
+
+        <div class="preview-box">
+            <h3>Aperçu :</h3>
+            <div id="qrPreview"></div>
+        </div>
+    </div>
+
+    <!-- Page Historique -->
+    <div id="pageHistory" class="card" style="display:none;">
+        <h2>Historique</h2>
+        <div id="historyList" style="margin-top:20px;"></div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 <script>
-const dict_part1 = [
-{word:"abaisser",definition:"Rendre plus bas."},
-{word:"abandon",definition:"Action de laisser quelque chose ou quelqu’un."},
-{word:"abattre",definition:"Faire tomber ou tuer."},
-{word:"abcès",definition:"Accumulation de pus."},
-{word:"abeille",definition:"Insecte qui produit du miel."},
-{word:"abolir",definition:"Supprimer une loi ou règle."},
-{word:"aborder",definition:"Commencer à traiter un sujet."},
-{word:"aboutir",definition:"Arriver à un résultat."},
-{word:"abréger",definition:"Raccourcir dans le temps."},
-{word:"abri",definition:"Endroit qui protège."},
-{word:"abriter",definition:"Mettre à l'abri."},
-{word:"abroger",definition:"Annuler une loi."},
-{word:"absence",definition:"Fait de ne pas être présent."},
-{word:"absent",definition:"Qui n'est pas là."},
-{word:"absorber",definition:"Retenir ou assimiler un liquide ou une idée."},
-{word:"abstrait",definition:"Qui n'est pas concret."},
-{word:"accélérer",definition:"Aller plus vite."},
-{word:"accent",definition:"Manière de prononcer."},
-{word:"accepter",definition:"Donner son accord."},
-{word:"accompagner",definition:"Aller avec quelqu'un."},
-{word:"accomplir",definition:"Achever une tâche."},
-{word:"accord",definition:"Entente ou permission donnée."},
-{word:"accrocher",definition:"Suspendre ou attacher."},
-{word:"accuser",definition:"Dire qu'on croit que quelqu'un a fait quelque chose de mal."},
-{word:"acheter",definition:"Obtenir contre de l'argent."},
-{word:"achever",definition:"Terminer."},
-{word:"acide",definition:"Substance chimique parfois piquante."},
-{word:"acier",definition:"Métal résistant."},
-{word:"action",definition:"Fait de faire quelque chose."},
-{word:"actionnaire",definition:"Personne qui possède des parts."},
-{word:"activité",definition:"Occupation, travail ou loisir."},
-{word:"activer",definition:"Mettre en marche."},
-{word:"acteur",definition:"Personne qui joue un rôle."},
-{word:"adapter",definition:"Modifier pour convenir."},
-{word:"addition",definition:"Opération d'addition."},
-{word:"admettre",definition:"Reconnaître ou accepter comme vrai."},
-{word:"adopter",definition:"Choisir ou prendre légalement un enfant."},
-{word:"adoucir",definition:"Rendre moins dur ou âpre."},
-{word:"adresse",definition:"Lieu où l'on habite."},
-{word:"adulte",definition:"Personne majeure."},
-{word:"aérer",definition:"Faire entrer de l'air."},
-{word:"affaire",definition:"Occupation ou commerce."},
-{word:"affection",definition:"Sentiment d'amour ou d'amitié."},
-{word:"affirmer",definition:"Dire avec certitude."},
-{word:"affluer",definition:"Arriver en grand nombre."},
-{word:"affronter",definition:"Faire face à quelque chose de difficile."},
-{word:"agence",definition:"Bureau ou entreprise offrant un service."},
-{word:"agir",definition:"Faire une action."},
-{word:"agrafer",definition:"Fixer avec une agrafe."},
-{word:"agir",definition:"Exercer une action (déjà présent)."},
-{word:"agricole",definition:"Relatif à l'agriculture."},
-{word:"aide",definition:"Assistance donnée."},
-{word:"aider",definition:"Apporter son aide."},
-{word:"aimable",definition:"Qui inspire de la sympathie."},
-{word:"aimer",definition:"Éprouver de l'affection."},
-{word:"air",definition:"Mélange gazeux que nous respirons."},
-{word:"ajouter",definition:"Mettre en plus."},
-{word:"alerte",definition:"État d'attention ou avertissement."},
-{word:"aliment",definition:"Nourriture."},
-{word:"allonger",definition:"Rendre plus long."},
-{word:"allumer",definition:"Mettre en marche (lumière, feu)."},
-{word:"aller",definition:"Se déplacer vers un lieu."},
-{word:"allure",definition:"Façon de marcher ou apparence."},
-{word:"alphabet",definition:"Ensemble des lettres d'une langue."},
-{word:"alpin",definition:"Relatif aux montagnes."},
-{word:"altruisme",definition:"Préoccupation pour les autres."},
-{word:"améliorer",definition:"Rendre meilleur."},
-{word:"amener",definition:"Apporter une personne ou chose."},
-{word:"amitié",definition:"Relation d'affection entre personnes."},
-{word:"amour",definition:"Sentiment d'affection intense."},
-{word:"analyser",definition:"Étudier en détail."},
-{word:"ancien",definition:"Qui est d'autrefois."},
-{word:"andouille",definition:"Saucisse ou personne bête (familier)."},
-{word:"anecdote",definition:"Petit récit intéressant."},
-{word:"angle",definition:"Intersection de deux lignes."},
-{word:"animer",definition:"Donner de la vie ou de l'énergie."},
-{word:"année",definition:"Période de douze mois."},
-{word:"annoncer",definition:"Faire savoir."},
-{word:"annuler",definition:"Rendre nul."},
-{word:"anse",definition:"Poignée ou courbure."},
-{word:"antécédent",definition:"Ce qui précède."},
-{word:"antenne",definition:"Dispositif pour capter des ondes."},
-{word:"apaiser",definition:"Calmer."},
-{word:"apercevoir",definition:"Voir rapidement."},
-{word:"applaudir",definition:"Frapper des mains pour encourager."},
-{word:"appareil",definition:"Objet conçu pour une fonction."},
-{word:"appartenir",definition:"Être la propriété de."},
-{word:"appeler",definition:"Inviter ou téléphoner."},
-{word:"apporter",definition:"Amener un objet."},
-{word:"apprendre",definition:"Acquérir un savoir."},
-{word:"approche",definition:"Façon de s'approcher ou méthode."},
-{word:"approuver",definition:"Donner son accord."},
-{word:"aptitude",definition:"Capacité à faire quelque chose."},
-{word:"arbre",definition:"Plante ligneuse de grande taille."},
-{word:"archiver",definition:"Classer pour garder en mémoire."},
-{word:"argent",definition:"Moyen d'échange ou métal précieux."},
-{word:"argument",definition:"Raison donnée pour convaincre."},
-{word:"arrêter",definition:"Faire cesser le mouvement."},
-{word:"arriver",definition:"Parvenir à un lieu ou un but."},
-{word:"art",definition:"Expression créative humaine."},
-{word:"article",definition:"Texte ou objet vendu."},
-{word:"assez",definition:"Suffisamment."},
-{word:"assister",definition:"Aider ou être présent."},
-{word:"associer",definition:"Mettre ensemble."},
-{word:"assurance",definition:"Garantie ou contrat de protection."},
-{word:"assurer",definition:"Garantir."},
-{word:"astuce",definition:"Conseil pratique."},
-{word:"astre",definition:"Corps céleste luminous."},
-{word:"atelier",definition:"Lieu de travail manuel."},
-{word:"attacher",definition:"Fixer ou lier."},
-{word:"atteindre",definition:"Arriver jusqu'à."},
-{word:"attirer",definition:"Provoquer l'intérêt ou l'approche."},
-{word:"attraper",definition:"Saisir ce qui bouge."},
-{word:"aubaine",definition:"Bonne occasion."},
-{word:"audace",definition:"Courage osé."},
-{word:"augmenter",definition:"Rendre plus grand en nombre ou taille."},
-{word:"aucun",definition:"Pas un seul."},
-{word:"auditeur",definition:"Personne qui écoute."},
-{word:"augmenter",definition:"(déjà présent) changer pour plus."}
-];
-</script><!-- PARTIE 3/5 : dictionnaire (mots 151 à 300) -->
-<script>
-const dict_part2 = [
-{word:"auricule",definition:"Petite partie de l’oreille."},
-{word:"autoriser",definition:"Donner la permission."},
-{word:"automne",definition:"Saison entre l'été et l'hiver."},
-{word:"avancer",definition:"Se déplacer vers l'avant."},
-{word:"aventure",definition:"Expérience inhabituelle ou risquée."},
-{word:"avenir",definition:"Temps à venir."},
-{word:"avertir",definition:"Informer d'un danger."},
-{word:"avoir",definition:"Posséder."},
-{word:"avouer",definition:"Reconnaître, admettre."},
-{word:"axe",definition:"Ligne centrale autour de laquelle quelque chose tourne."},
-{word:"baisser",definition:"Rendre plus bas."},
-{word:"balle",definition:"Objet sphérique pour jouer."},
-{word:"banque",definition:"Établissement financier."},
-{word:"barre",definition:"Pièce longue et rigide."},
-{word:"battre",definition:"Frapper ou vaincre."},
-{word:"beauté",definition:"Qualité de ce qui est beau."},
-{word:"bénéfice",definition:"Gain ou avantage."},
-{word:"besoin",definition:"Ce qui est nécessaire."},
-{word:"bibliothèque",definition:"Lieu avec des livres."},
-{word:"bicyclette",definition:"Vélo."},
-{word:"bizarre",definition:"Étrange."},
-{word:"blanc",definition:"Couleur claire."},
-{word:"blesser",definition:"Faire du mal."},
-{word:"boire",definition:"Avaler un liquide."},
-{word:"bonheur",definition:"État de satisfaction."},
-{word:"bord",definition:"Extrémité."},
-{word:"bouche",definition:"Ouverture pour manger et parler."},
-{word:"bouger",definition:"Changer de place."},
-{word:"boulanger",definition:"Personne qui fait du pain."},
-{word:"bouton",definition:"Petite pièce à presser ou fixer."},
-{word:"branche",definition:"Partie d’un arbre."},
-{word:"brave",definition:"Courageux."},
-{word:"briller",definition:"Émettre de la lumière."},
-{word:"bruit",definition:"Son désagréable."},
-{word:"bureau",definition:"Meuble ou lieu de travail."},
-{word:"cacher",definition:"Mettre hors de vue."},
-{word:"calcul",definition:"Opération mathématique."},
-{word:"calme",definition:"État de tranquillité."},
-{word:"camion",definition:"Véhicule de transport."},
-{word:"canal",definition:"Cours d'eau artificiel."},
-{word:"capable",definition:"Qui peut faire quelque chose."},
-{word:"capital",definition:"Ville principale ou argent investi."},
-{word:"capturer",definition:"Prendre et garder."},
-{word:"caractère",definition:"Personnalité ou lettre."},
-{word:"carte",definition:"Feuille informative ou géographique."},
-{word:"casser",definition:"Briser."},
-{word:"cause",definition:"Raison d'un événement."},
-{word:"céder",definition:"Abandonner ou laisser passer."},
-{word:"célèbre",definition:"Reconnu et connu de tous."},
-{word:"celui",definition:"Pronom démonstratif."},
-{word:"cent",definition:"Nombre 100."},
-{word:"centre",definition:"Milieu."},
-{word:"cerise",definition:"Petit fruit rouge."},
-{word:"certain",definition:"Sans doute, sûr."},
-{word:"chaise",definition:"Objet pour s'asseoir."},
-{word:"chaud",definition:"Qui a une température élevée."},
-{word:"chercher",definition:"Essayer de trouver."},
-{word:"cheval",definition:"Animal de monture."},
-{word:"cheveu",definition:"Fil qui pousse sur la tête."},
-{word:"chien",definition:"Animal domestique fidèle."},
-{word:"choisir",definition:"Sélectionner."},
-{word:"chose",definition:"Objet ou fait quelconque."},
-{word:"ciel",definition:"Espace au-dessus de la terre."},
-{word:"circuler",definition:"Se déplacer sur un trajet."},
-{word:"classe",definition:"Groupe d’élèves."},
-{word:"clé",definition:"Objet pour ouvrir une serrure."},
-{word:"client",definition:"Personne qui achète."},
-{word:"cloche",definition:"Objet qui sonne."},
-{word:"coeur",definition:"Organe ou sentiment."},
-{word:"coiffer",definition:"Arranger les cheveux."},
-{word:"coller",definition:"Mettre en adhérence."},
-{word:"colorer",definition:"Mettre de la couleur."},
-{word:"combat",definition:"Lutte."},
-{word:"combiner",definition:"Mettre ensemble."},
-{word:"commencer",definition:"Débuter."},
-{word:"commerce",definition:"Activité d'achat et vente."},
-{word:"communiquer",definition:"Transmettre des informations."},
-{word:"compagnie",definition:"Groupe ou entreprise."},
-{word:"compétence",definition:"Aptitude."},
-{word:"compléter",definition:"Rendre complet."},
-{word:"comprendre",definition:"Saisir le sens."},
-{word:"compter",definition:"Compter des nombres."},
-{word:"conduire",definition:"Diriger un véhicule."},
-{word:"confirmer",definition:"Valider ou affirmer."},
-{word:"confusion",definition:"Désordre ou embarras."},
-{word:"connaître",definition:"Avoir connaissance."},
-{word:"conseil",definition:"Recommandation."},
-{word:"considérer",definition:"Examiner attentivement."},
-{word:"constater",definition:"Observer et noter."},
-{word:"construire",definition:"Édifier."},
-{word:"consulter",definition:"Demander conseil ou vérifier."},
-{word:"continuer",definition:"Poursuivre."},
-{word:"contrôler",definition:"Vérifier et diriger."},
-{word:"convaincre",definition:"Amener à croire."},
-{word:"coordonner",definition:"Organiser en harmonie."},
-{word:"copie",definition:"Reproduction."},
-{word:"corps",definition:"Ensemble matériel d’un être vivant."},
-{word:"corriger",definition:"Rectifier une erreur."},
-{word:"coudre",definition:"Assembler avec du fil."},
-{word:"coup",definition:"Choc ou action brusque."},
-{word:"courir",definition:"Se déplacer rapidement."},
-{word:"couvrir",definition:"Mettre quelque chose dessus."},
-{word:"créer",definition:"Faire exister."},
-{word:"crier",definition:"Parler fort."},
-{word:"cristal",definition:"Substance transparente et dure."},
-{word:"croire",definition:"Penser vrai."},
-{word:"croissance",definition:"Augmentation."},
-{word:"cueillir",definition:"Prendre des fruits ou fleurs."},
-{word:"curieux",definition:"Qui aime savoir."},
-{word:"cycle",definition:"Série qui se répète."},
-{word:"danger",definition:"Risque de mal."},
-{word:"danser",definition:"Mouvement au rythme de la musique."},
-{word:"date",definition:"Jour précis."},
-{word:"dauphin",definition:"Mammifère marin intelligent."},
-{word:"décider",definition:"Prendre une décision."},
-{word:"déclarer",definition:"Annoncer officiellement."},
-{word:"décrire",definition:"Expliquer en détails."},
-{word:"déduire",definition:"Tirer une conclusion."},
-{word:"défendre",definition:"Protéger."},
-{word:"défiler",definition:"Marcher en ligne pour parade."},
-{word:"définitif",definition:"Qui est pour toujours."},
-{word:"délicat",definition:"Fragile ou sensible."},
-{word:"demander",definition:"Poser une question ou requête."},
-{word:"demeurer",definition:"Rester à un endroit."},
-{word:"demi",definition:"Moitié."},
-{word:"dent",definition:"Organe dans la bouche."},
-{word:"départ",definition:"Action de quitter."},
-{word:"dépasser",definition:"Aller au-delà."},
-{word:"déplacer",definition:"Changer de place."},
-{word:"déposer",definition:"Mettre quelque part."},
-{word:"déranger",definition:"Troubler ou gêner."},
-{word:"descendre",definition:"Aller vers le bas."},
-{word:"désigner",definition:"Montrer ou nommer."},
-{word:"dessiner",definition:"Faire un dessin."},
-{word:"dessus",definition:"Partie supérieure."},
-{word:"détail",definition:"Petit élément précis."},
-{word:"détester",definition:"Ne pas aimer."},
-{word:"devenir",definition:"Changer pour devenir."},
-{word:"deviner",definition:"Trouver sans savoir sûr."},
-{word:"devoir",definition:"Être obligé de."},
-{word:"dictionnaire",definition:"Recueil de mots et définitions."},
-{word:"différent",definition:"Pas pareil."},
-{word:"difficile",definition:"Qui demande un effort."}
-];
-</script><!-- PARTIE 4/5 : dictionnaire (mots 301 à 500) -->
-<script>
-const dict_part3 = [
-{word:"dîner",definition:"Repas du soir."},
-{word:"dire",definition:"Exprimer avec des mots."},
-{word:"diriger",definition:"Conduire ou commander."},
-{word:"discours",definition:"Texte parlé."},
-{word:"disparaître",definition:"Ne plus être visible."},
-{word:"disposer",definition:"Mettre en ordre."},
-{word:"distance",definition:"Espace entre deux points."},
-{word:"divers",definition:"Varié, multiple."},
-{word:"diviser",definition:"Partager en parties."},
-{word:"docile",definition:"Obéissant."},
-{word:"docteur",definition:"Personne pratiquant la médecine."},
-{word:"domaine",definition:"Champ d’activité ou terrain."},
-{word:"domicile",definition:"Lieu de résidence."},
-{word:"don",definition:"Ce que l’on donne gratuitement."},
-{word:"donner",definition:"Offrir quelque chose."},
-{word:"double",definition:"Deux fois."},
-{word:"douter",definition:"Ne pas être sûr."},
-{word:"drapeau",definition:"Symbole national sur tissu."},
-{word:"dresser",definition:"Mettre droit ou enseigner."},
-{word:"droit",definition:"Ce qui est juste ou ligne."},
-{word:"durée",definition:"Temps que dure quelque chose."},
-{word:"durable",definition:"Qui peut durer longtemps."},
-{word:"durer",definition:"Continuer dans le temps."},
-{word:"effacer",definition:"Supprimer."},
-{word:"effort",definition:"Énergie dépensée."},
-{word:"élargir",definition:"Rendre plus large."},
-{word:"élever",definition:"Mettre plus haut ou instruire."},
-{word:"éliciter",definition:"Provoquer une réaction."},
-{word:"éliminer",definition:"Supprimer ou enlever."},
-{word:"éloigner",definition:"Mettre à distance."},
-{word:"embrasser",definition:"Serrer dans ses bras."},
-{word:"émettre",definition:"Produire ou diffuser."},
-{word:"émotion",definition:"Sentiment ressenti."},
-{word:"empêcher",definition:"Rendre impossible."},
-{word:"employer",definition:"Utiliser ou engager."},
-{word:"enfance",definition:"Période de la vie jeune."},
-{word:"enfermer",definition:"Mettre à l’intérieur."},
-{word:"enfoncer",definition:"Pousser vers l’intérieur."},
-{word:"engager",definition:"Impliquer ou embaucher."},
-{word:"engin",definition:"Appareil mécanique."},
-{word:"enlever",definition:"Retirer ou faire partir."},
-{word:"enseigner",definition:"Transmettre un savoir."},
-{word:"entendre",definition:"Percevoir un son."},
-{word:"entier",definition:"Complet, total."},
-{word:"entrer",definition:"Aller à l’intérieur."},
-{word:"environnement",definition:"Milieu naturel ou social."},
-{word:"envoyer",definition:"Faire parvenir."},
-{word:"épais",definition:"Qui a une grande largeur ou densité."},
-{word:"épaule",definition:"Partie du corps."},
-{word:"épicer",definition:"Ajouter des épices."},
-{word:"espérer",definition:"Souhaiter que quelque chose arrive."},
-{word:"esprit",definition:"Intelligence ou mental."},
-{word:"essayer",definition:"Tenter de faire."},
-{word:"estimer",definition:"Évaluer ou juger."},
-{word:"établir",definition:"Mettre en place."},
-{word:"étage",definition:"Niveau d’un bâtiment."},
-{word:"étaler",definition:"Répartir sur une surface."},
-{word:"étang",definition:"Petit plan d’eau."},
-{word:"étendre",definition:"Allonger ou agrandir."},
-{word:"éternel",definition:"Qui dure toujours."},
-{word:"étonner",definition:"Surprendre."},
-{word:"étudier",definition:"Apprendre."},
-{word:"événement",definition:"Fait important."},
-{word:"évaluer",definition:"Mesurer ou estimer."},
-{word:"évasion",definition:"Fait de s’échapper."},
-{word:"évidence",definition:"Chose claire et certaine."},
-{word:"exact",definition:"Précis."},
-{word:"examiner",definition:"Observer attentivement."},
-{word:"exemple",definition:"Illustration ou modèle."},
-{word:"exciter",definition:"Provoquer un état émotionnel."},
-{word:"exiger",definition:"Demander avec force."},
-{word:"expliquer",definition:"Rendre clair."},
-{word:"exposer",definition:"Présenter ou mettre en danger."},
-{word:"exprimer",definition:"Manifester par paroles ou gestes."},
-{word:"extension",definition:"Allongement ou agrandissement."},
-{word:"extraire",definition:"Retirer de l’intérieur."},
-{word:"fabriquer",definition:"Produire."},
-{word:"facile",definition:"Qui ne demande pas d’effort."},
-{word:"facteur",definition:"Personne ou élément qui influence."},
-{word:"faculté",definition:"Capacité ou université."},
-{word:"faire",definition:"Accomplir une action."},
-{word:"famille",definition:"Groupe de parents et enfants."},
-{word:"fantaisie",definition:"Idée ou création originale."},
-{word:"farine",definition:"Poudre obtenue du grain."},
-{word:"fatigue",definition:"État de lassitude."},
-{word:"favori",definition:"Préféré."},
-{word:"fermer",definition:"Cesser d’être ouvert."},
-{word:"fêter",definition:"Célébrer."},
-{word:"feu",definition:"Flamme."},
-{word:"feuille",definition:"Partie d’une plante."},
-{word:"fiche",definition:"Petit papier d’information."},
-{word:"figurer",definition:"Apparaître ou représenter."},
-{word:"film",definition:"Séquence vidéo."},
-{word:"fin",definition:"Terminaison."},
-{word:"fixer",definition:"Attacher ou déterminer."},
-{word:"flamme",definition:"Feu visible."},
-{word:"fleur",definition:"Partie colorée de la plante."},
-{word:"flocon",definition:"Petit morceau de neige."},
-{word:"fonds",definition:"Argent disponible ou base."},
-{word:"forcer",definition:"Obliger."},
-{word:"forêt",definition:"Grand ensemble d’arbres."},
-{word:"formule",definition:"Expression écrite ou méthode."},
-{word:"fort",definition:"Puissant ou résistant."},
-{word:"fraction",definition:"Part d’un tout."},
-{word:"fragile",definition:"Qui peut se casser facilement."},
-{word:"frapper",definition:"Donner un coup."},
-{word:"frère",definition:"Fils des mêmes parents."},
-{word:"front",definition:"Partie supérieure du visage."},
-{word:"fruit",definition:"Produit comestible de la plante."},
-{word:"fonction",definition:"Rôle ou utilisation."},
-{word:"fonctionner",definition:"Être en activité."},
-{word:"fumer",definition:"Produire de la fumée."},
-{word:"furet",definition:"Petit mammifère."},
-{word:"futur",definition:"Temps à venir."}
-];
-</script><script>
-// --- CALCULATRICE ---
-let screen = document.getElementById('screen');
-let eqClickCount = 0;
 
-function press(val){
-  screen.value += val;
+// Navigation
+btnQR.onclick = () => {
+    btnQR.classList.add("active");
+    btnHistory.classList.remove("active");
+    pageQR.style.display = "block";
+    pageHistory.style.display = "none";
+};
+
+btnHistory.onclick = () => {
+    btnQR.classList.remove("active");
+    btnHistory.classList.add("active");
+    pageQR.style.display = "none";
+    pageHistory.style.display = "block";
+};
+
+// Génération QR
+function generateQR() {
+    const text = qrText.value.trim();
+    const name = qrName.value.trim();
+
+    if (!text || !name) {
+        alert("Il faut remplir le texte ET le nom du QR !");
+        return;
+    }
+
+    QRCode.toDataURL(text, { width: 250, margin: 1 }, (err, url) => {
+        qrPreview.innerHTML =
+            `<img src="${url}"><br><a href="${url}" download="${name}.png">Télécharger</a>`;
+
+        const entry = document.createElement("div");
+        entry.className = "history-item";
+        entry.innerHTML = `
+            <div>
+                <strong>${name}</strong><br>
+                <small>${new Date().toLocaleString()}</small>
+            </div>
+            <button class="download-btn" onclick="downloadQR('${url}', '${name}')">Télécharger</button>
+        `;
+        historyList.prepend(entry);
+    });
 }
 
-function clearCalc(){
-  screen.value = '';
-  eqClickCount = 0;
+// Téléchargement
+function downloadQR(url, name) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name + ".png";
+    a.click();
 }
 
-function equal(){
-  try{
-    screen.value = eval(screen.value);
-  } catch {
-    screen.value = "Erreur";
-  }
-  eqClickCount++;
-  if(eqClickCount === 4){
-    openSecret();
-    eqClickCount = 0;
-  }
-}
+// Mode sombre
+const toggleDark = document.getElementById("toggleDark");
 
-// --- MODE SECRET ---
-let secretDiv = document.getElementById('secret');
+toggleDark.onclick = () => {
+    document.body.classList.toggle("dark");
+    toggleDark.innerHTML = document.body.classList.contains("dark")
+        ? "☀️ Mode clair"
+        : "🌙 Mode sombre";
+};
 
-function openSecret(){
-  secretDiv.style.display = 'block';
-  loadNotes();
-  loadDict();
-}
-
-function closeSecret(){
-  secretDiv.style.display = 'none';
-}
-
-// --- NOTES ---
-function saveNote(){
-  let mat = document.getElementById('matiere').value;
-  let txt = document.getElementById('note').value;
-  if(!txt) return;
-  let notes = JSON.parse(localStorage.getItem('notes') || '{}');
-  if(!notes[mat]) notes[mat] = [];
-  notes[mat].push(txt);
-  localStorage.setItem('notes', JSON.stringify(notes));
-  document.getElementById('note').value = '';
-  loadNotes();
-}
-
-function loadNotes(){
-  let notesDiv = document.getElementById('notes');
-  let notes = JSON.parse(localStorage.getItem('notes') || '{}');
-  notesDiv.innerHTML = '';
-  for(let mat in notes){
-    notesDiv.innerHTML += `<h4>${mat}</h4>`;
-    notes[mat].forEach(n => notesDiv.innerHTML += `<p>${n}</p>`);
-  }
-}
-
-// --- DICTIONNAIRE 500 MOTS ---
-const dict = [...dict_part1,...dict_part2,...dict_part3];
-
-function loadDict(){
-  let dictDiv = document.getElementById('dict-entries');
-  dictDiv.innerHTML = '';
-  dict.forEach(d => {
-    let div = document.createElement('div');
-    div.classList.add('dict-entry');
-    div.innerHTML = `<span class="dict-word">${d.word}</span>: ${d.definition}`;
-    dictDiv.appendChild(div);
-  });
-}
-
-// --- RECHERCHE DICTIONNAIRE ---
-document.getElementById('dict-search').addEventListener('input', function(){
-  let val = this.value.toLowerCase();
-  let dictDiv = document.getElementById('dict-entries');
-  dictDiv.innerHTML = '';
-  dict.filter(d => d.word.toLowerCase().includes(val)).forEach(d => {
-    let div = document.createElement('div');
-    div.classList.add('dict-entry');
-    div.innerHTML = `<span class="dict-word">${d.word}</span>: ${d.definition}`;
-    dictDiv.appendChild(div);
-  });
-});
 </script>
-
-</div> <!-- FIN DU SECRET -->
 </body>
 </html>
